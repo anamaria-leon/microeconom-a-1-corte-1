@@ -1,0 +1,542 @@
+"""
+Created on Thu Jun 26 21:30:05 2025
+
+@author: usuario
+"""
+import tkinter as tk
+from tkinter import ttk, messagebox
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+import numpy as np
+from sympy import symbols, diff, nsolve, Eq, Min, Max, sqrt, sympify, exp, pi, sin, cos, tan, log, Abs, solve, lambdify
+import re
+
+class ConsumerTheoryApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Teoría del Consumidor - Restricciones y Preferencias")
+        self.root.geometry("1200x800")
+        
+        # Notebook principal
+        self.main_notebook = ttk.Notebook(root)
+        self.main_notebook.pack(fill='both', expand=True)
+        
+        # Pestañas principales
+        self.create_theory_tab()
+        self.create_interactive_tab()
+    
+    def create_theory_tab(self):
+        """Pestaña con la teoría sobre efectos ingreso y sustitución"""
+        tab = ttk.Frame(self.main_notebook)
+        self.main_notebook.add(tab, text="Teoría")
+        
+        # Frame con scroll
+        canvas = tk.Canvas(tab)
+        scrollbar = ttk.Scrollbar(tab, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Contenido teórico
+        content = """
+EFECTOS INGRESO Y SUSTITUCIÓN EN LA TEORÍA DEL CONSUMIDOR
+
+Cuando el precio de un bien cambia, el consumidor se ve afectado de dos maneras:
+
+1. EFECTO SUSTITUCIÓN (ES):
+   - Mide cómo el consumidor sustituye el bien que se ha vuelto más caro por el bien que se ha vuelto relativamente más barato.
+   - Mantiene constante el poder adquisitivo (Slutsky) o la utilidad (Hicks).
+   - Siempre es negativo (cuando sube el precio, disminuye la cantidad demandada).
+
+2. EFECTO INGRESO (EI):
+   - Mide cómo el cambio en el poder adquisitivo afecta el consumo.
+   - Puede ser positivo o negativo dependiendo de si el bien es normal o inferior.
+
+TIPOS DE BIENES:
+
+- Bienes Normales: EI negativo (mismo signo que ES)
+- Bienes Inferiores: EI positivo (signo opuesto al ES)
+- Bienes Giffen: EI positivo y mayor que el ES (la demanda aumenta al aumentar el precio)
+
+MÉTODOS DE DESCOMPOSICIÓN:
+
+A. HICKS:
+   - Efecto Sustitución: Mantiene constante la utilidad (misma curva de indiferencia).
+   - Efecto Ingreso: Muestra el movimiento a la nueva curva de indiferencia.
+
+B. SLUTSKY:
+   - Efecto Sustitución: Mantiene constante el poder adquisitivo (puede comprar la cesta original).
+   - Efecto Ingreso: Muestra el ajuste al nuevo nivel de ingreso.
+
+EJEMPLO PRÁCTICO:
+
+Si el precio del bien X aumenta:
+1. El efecto sustitución lleva a consumir menos X y más Y.
+2. El efecto ingreso reduce aún más el consumo de X si es un bien normal, 
+   o lo aumenta si es un bien inferior (caso Giffen).
+"""
+        text = tk.Text(scrollable_frame, wrap=tk.WORD, padx=20, pady=20, font=('Helvetica', 12))
+        text.pack(fill='both', expand=True)
+        text.insert(tk.END, content)
+        text.config(state=tk.DISABLED)
+        
+        # Ejemplo gráfico
+        fig = plt.Figure(figsize=(8, 5))
+        ax = fig.add_subplot(111)
+        
+        # Dibujar un ejemplo gráfico
+        x = np.linspace(0, 10, 100)
+        ax.plot(x, 10 - x, 'r-', label='Restricción Presupuestaria Inicial')
+        ax.plot(x, 5 - 0.5*x, 'g-', label='RP Final (Px aumenta)')
+        ax.plot(x, 7.5 - 0.75*x, 'b--', label='RP Compensada (Slutsky)')
+        
+        # Puntos
+        ax.scatter(5, 5, color='blue', s=100, label='Óptimo Inicial (E0)')
+        ax.scatter(3, 3.5, color='green', s=100, label='Óptimo Final (EF)')
+        ax.scatter(4, 4.5, color='purple', s=100, label='Óptimo Compensado (ES)')
+        
+        ax.set_xlim(0, 10)
+        ax.set_ylim(0, 10)
+        ax.set_xlabel('Bien X')
+        ax.set_ylabel('Bien Y')
+        ax.set_title('Descomposición de Efectos')
+        ax.legend()
+        ax.grid(True)
+        
+        canvas = FigureCanvasTkAgg(fig, master=scrollable_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+
+    def create_interactive_tab(self):
+        """Pestaña interactiva para cálculos personalizados"""
+        tab = ttk.Frame(self.main_notebook)
+        self.main_notebook.add(tab, text="Calculadora")
+        
+        main_frame = ttk.Frame(tab)
+        main_frame.pack(fill='both', expand=True)
+        
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Variables para inputs
+        self.utility_function_var = tk.StringVar(value="x**0.5 * y**0.5")
+        self.p1_var = tk.DoubleVar(value=1.0)
+        self.p2_var = tk.DoubleVar(value=1.0)
+        self.m_var = tk.DoubleVar(value=100.0)
+        self.changed_price_var = tk.StringVar(value="p1")
+        self.new_price_val_var = tk.DoubleVar(value=2.0)
+        
+        # Interfaz
+        ttk.Label(scrollable_frame, text="Calculadora de Preferencias", 
+                 font=('Helvetica', 14, 'bold')).grid(row=0, column=0, columnspan=3, pady=10)
+        
+        ttk.Label(scrollable_frame, text="Función de Utilidad U(x,y):").grid(row=1, column=0, sticky='e', padx=5, pady=5)
+        self.utility_entry = ttk.Entry(scrollable_frame, textvariable=self.utility_function_var, width=40)
+        self.utility_entry.grid(row=1, column=1, sticky='ew', columnspan=2, padx=5, pady=5)
+        
+        # Panel de operaciones
+        ops_frame = ttk.Frame(scrollable_frame)
+        ops_frame.grid(row=2, column=0, columnspan=3, sticky='ew', pady=5, padx=5)
+        
+        operations = [
+            ('^', '**'), ('√', 'sqrt('), ('e', 'exp(1)'), ('π', 'pi'), 
+            ('ln', 'log('), ('sin', 'sin('), ('cos', 'cos('), ('tan', 'tan('),
+            ('min', 'Min('), ('max', 'Max('), ('+', '+'), ('-', '-'),
+            ('*', '*'), ('/', '/'), ('(', '('), (')', ')')
+        ]
+        
+        for i, (text, op) in enumerate(operations):
+            btn = ttk.Button(ops_frame, text=text, width=5,
+                            command=lambda o=op: self.insert_operation(o))
+            btn.grid(row=i//6, column=i%6, padx=1, pady=1, sticky='ew')
+        
+        # Parámetros
+        ttk.Label(scrollable_frame, text="Parámetros Iniciales:", 
+                 font=('Helvetica', 10, 'bold')).grid(row=3, column=0, columnspan=3, sticky='w', pady=10, padx=5)
+        
+        ttk.Label(scrollable_frame, text="Precio del Bien 1 (p₁):").grid(row=4, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.p1_var, width=10).grid(row=4, column=1, sticky='w', padx=5, pady=2)
+        
+        ttk.Label(scrollable_frame, text="Precio del Bien 2 (p₂):").grid(row=5, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.p2_var, width=10).grid(row=5, column=1, sticky='w', padx=5, pady=2)
+        
+        ttk.Label(scrollable_frame, text="Ingreso (m):").grid(row=6, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.m_var, width=10).grid(row=6, column=1, sticky='w', padx=5, pady=2)
+        
+        # Cambio de precio
+        ttk.Label(scrollable_frame, text="Cambio de Precio:", 
+                 font=('Helvetica', 10, 'bold')).grid(row=7, column=0, columnspan=3, sticky='w', pady=10, padx=5)
+
+        ttk.Label(scrollable_frame, text="Precio a cambiar:").grid(row=8, column=0, sticky='e', padx=5, pady=2)
+        ttk.Combobox(scrollable_frame, textvariable=self.changed_price_var,
+                    values=["p1", "p2"]).grid(row=8, column=1, sticky='ew', padx=5, pady=2)
+        
+        ttk.Label(scrollable_frame, text="Nuevo Valor:").grid(row=9, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.new_price_val_var, width=10).grid(row=9, column=1, sticky='w', padx=5, pady=2)
+
+        # Botón de cálculo
+        ttk.Button(scrollable_frame, text="Calcular y Graficar", 
+                  command=self.calculate_and_plot).grid(row=10, column=0, columnspan=3, pady=15)
+        
+        # Frame para resultados
+        self.results_frame = ttk.Frame(scrollable_frame)
+        self.results_frame.grid(row=11, column=0, columnspan=3, sticky='nsew', padx=10, pady=10)
+        
+        scrollable_frame.grid_columnconfigure(1, weight=1)
+
+    def insert_operation(self, operation):
+        """Inserta una operación matemática en el campo de entrada."""
+        current = self.utility_entry.get()
+        pos = self.utility_entry.index(tk.INSERT)
+        
+        if operation.endswith('('):
+            new_text = current[:pos] + operation + ')' + current[pos:]
+            new_pos = pos + len(operation)
+        elif operation in ['Min(', 'Max(']:
+            new_text = current[:pos] + operation + 'x, y)' + current[pos:]
+            new_pos = pos + len(operation) + 1
+        else:
+            new_text = current[:pos] + operation + current[pos:]
+            new_pos = pos + len(operation)
+        
+        self.utility_entry.delete(0, tk.END)
+        self.utility_entry.insert(0, new_text)
+        self.utility_entry.icursor(new_pos)
+
+    def preprocess_utility_string(self, utility_str):
+        """Pre-procesa la cadena de utilidad para corregir sintaxis."""
+        # Corregir errores comunes
+        replacements = {
+            "M+n": "Min", "K": "x", "cos": "cos", "tan": "tan", 
+            "min": "Min", "max": "Max", "ln": "log", "e": "exp(1)"
+        }
+        
+        for wrong, right in replacements.items():
+            utility_str = utility_str.replace(wrong, right)
+        
+        # Asegurar que Min/Max tengan paréntesis
+        if "Min" in utility_str and "Min(" not in utility_str:
+            utility_str = utility_str.replace("Min", "Min(") + ")"
+        if "Max" in utility_str and "Max(" not in utility_str:
+            utility_str = utility_str.replace("Max", "Max(") + ")"
+        
+        # Insertar * para multiplicación implícita
+        utility_str = re.sub(r'(\d)([a-zA-Z(])', r'\1*\2', utility_str)
+        utility_str = re.sub(r'([a-zA-Z)])([a-zA-Z(])', r'\1*\2', utility_str)
+        
+        # Reemplazar símbolos especiales
+        utility_str = utility_str.replace("√", "sqrt").replace("π", "pi")
+        
+        return utility_str
+
+    def solve_optimal_bundle(self, U_sym, p1_val, p2_val, m_val, x_sym, y_sym):
+        """Calcula el óptimo del consumidor para diferentes tipos de funciones."""
+        # Complementarios perfectos: Min(ax, by)
+        if U_sym.has(Min):
+            try:
+                # Obtener los argumentos de Min
+                min_args = U_sym.args if U_sym.func == Min else None
+                if min_args is None:
+                    # Intentar extraer de la representación en cadena
+                    if "Min(" in str(U_sym):
+                        parts = str(U_sym).split('Min(')[1].split(')')[0].split(',')
+                        a_expr = sympify(parts[0].strip())
+                        b_expr = sympify(parts[1].strip())
+                    else:
+                        # Asumir Min(x,y) por defecto
+                        a_expr = x_sym
+                        b_expr = y_sym
+                else:
+                    a_expr, b_expr = min_args
+                
+                # Obtener coeficientes
+                a = float(a_expr.coeff(x_sym)) if x_sym in a_expr.free_symbols else 1.0
+                b = float(b_expr.coeff(y_sym)) if y_sym in b_expr.free_symbols else 1.0
+                if a == 0: a = 1.0
+                if b == 0: b = 1.0
+                
+                # Calcular óptimo: x = (m * b) / (p1*b + p2*a), y = (m * a) / (p1*b + p2*a)
+                denom = p1_val * b + p2_val * a
+                if denom == 0:
+                    raise ValueError("Denominador cero en complementarios perfectos")
+                    
+                x_opt = (m_val * b) / denom
+                y_opt = (m_val * a) / denom
+                u_level = float(Min(a*x_opt, b*y_opt))
+                return x_opt, y_opt, u_level
+            except Exception as e:
+                raise ValueError(f"Error en complementarios perfectos: {str(e)}")
+        
+        # Función cuasilineal: f(x) + y o x + g(y)
+        elif (U_sym.is_Add and len(U_sym.args) == 2):
+            term1, term2 = U_sym.args
+            
+            # Caso 1: f(x) + y
+            if (x_sym in term1.free_symbols and y_sym not in term1.free_symbols and
+                y_sym in term2.free_symbols and x_sym not in term2.free_symbols):
+                try:
+                    # UMg_x = f'(x), UMg_y = 1
+                    umg_x = diff(term1, x_sym)
+                    # Condición: UMg_x / p1 = UMg_y / p2  =>  f'(x) / p1 = 1 / p2
+                    x_opt = nsolve(Eq(umg_x * p2_val, p1_val), x_sym, m_val/(2*p1_val))
+                    x_opt = max(0, min(float(x_opt), m_val/p1_val))
+                    y_opt = (m_val - p1_val * x_opt) / p2_val
+                    y_opt = max(0, min(float(y_opt), m_val/p2_val))
+                    
+                    # Verificar si la solución es válida
+                    if y_opt >= 0 and x_opt >= 0:
+                        u_level = float(U_sym.subs({x_sym: x_opt, y_sym: y_opt}))
+                        return x_opt, y_opt, u_level
+                    else:
+                        # Probar esquinas
+                        return self.calculate_corner_solution(U_sym, p1_val, p2_val, m_val, x_sym, y_sym)
+                except:
+                    # Si falla, probar esquinas
+                    return self.calculate_corner_solution(U_sym, p1_val, p2_val, m_val, x_sym, y_sym)
+            
+            # Caso 2: x + g(y)
+            elif (x_sym in term1.free_symbols and y_sym not in term1.free_symbols and
+                  y_sym in term2.free_symbols and x_sym not in term2.free_symbols):
+                try:
+                    umg_y = diff(term2, y_sym)
+                    y_opt = nsolve(Eq(umg_y * p1_val, p2_val), y_sym, m_val/(2*p2_val))
+                    y_opt = max(0, min(float(y_opt), m_val/p2_val))
+                    x_opt = (m_val - p2_val * y_opt) / p1_val
+                    x_opt = max(0, min(float(x_opt), m_val/p1_val))
+                    
+                    # Verificar si la solución es válida
+                    if y_opt >= 0 and x_opt >= 0:
+                        u_level = float(U_sym.subs({x_sym: x_opt, y_sym: y_opt}))
+                        return x_opt, y_opt, u_level
+                    else:
+                        # Probar esquinas
+                        return self.calculate_corner_solution(U_sym, p1_val, p2_val, m_val, x_sym, y_sym)
+                except:
+                    # Si falla, probar esquinas
+                    return self.calculate_corner_solution(U_sym, p1_val, p2_val, m_val, x_sym, y_sym)
+        
+        # Otros casos (Cobb-Douglas, sustitutos perfectos, etc.)
+        try:
+            # Resolver con condición de tangencia
+            umg_x = diff(U_sym, x_sym)
+            umg_y = diff(U_sym, y_sym)
+            
+            # Condición: UMg_x / UMg_y = p1 / p2
+            # Restricción: p1*x + p2*y = m
+            sol = nsolve((Eq(umg_x * p2_val, umg_y * p1_val),
+                        Eq(p1_val*x_sym + p2_val*y_sym, m_val)),
+                        (x_sym, y_sym), (m_val/(2*p1_val), m_val/(2*p2_val)))
+            x_opt = max(0, min(float(sol[0]), m_val/p1_val))
+            y_opt = max(0, min(float(sol[1]), m_val/p2_val))
+            u_level = float(U_sym.subs({x_sym: x_opt, y_sym: y_opt}))
+            return x_opt, y_opt, u_level
+        except:
+            # Si falla, probar esquinas
+            return self.calculate_corner_solution(U_sym, p1_val, p2_val, m_val, x_sym, y_sym)
+
+    def calculate_corner_solution(self, U_sym, p1_val, p2_val, m_val, x_sym, y_sym):
+        """Calcula la solución en las esquinas para cuando no hay solución interior."""
+        try:
+            # Esquina 1: solo bien x
+            x_opt1 = m_val / p1_val
+            y_opt1 = 0
+            u1 = float(U_sym.subs({x_sym: x_opt1, y_sym: y_opt1}))
+            
+            # Esquina 2: solo bien y
+            x_opt2 = 0
+            y_opt2 = m_val / p2_val
+            u2 = float(U_sym.subs({x_sym: x_opt2, y_sym: y_opt2}))
+            
+            if u1 > u2:
+                return x_opt1, y_opt1, u1
+            else:
+                return x_opt2, y_opt2, u2
+        except Exception as e:
+            raise ValueError(f"No se pudo encontrar solución: {str(e)}")
+
+    def calculate_and_plot(self):
+        """Calcula y grafica según los inputs del usuario."""
+        try:
+            # Limpiar resultados anteriores
+            for widget in self.results_frame.winfo_children():
+                widget.destroy()
+            
+            # Obtener y preprocesar función de utilidad
+            utility_str = self.utility_function_var.get()
+            utility_str = self.preprocess_utility_string(utility_str)
+            
+            p1 = self.p1_var.get()
+            p2 = self.p2_var.get()
+            m = self.m_var.get()
+            changed_price = self.changed_price_var.get()
+            new_price = self.new_price_val_var.get()
+            
+            # Validar
+            if p1 <= 0 or p2 <= 0 or m <= 0 or new_price <= 0:
+                raise ValueError("Los precios y el ingreso deben ser positivos.")
+            
+            # Símbolos
+            x, y = symbols('x y')
+            
+            # Manejar funciones especiales
+            local_dict = {
+                'x': x, 'y': y, 
+                'Min': Min, 'Max': Max, 
+                'sqrt': sqrt, 'log': log, 
+                'exp': exp, 'pi': pi,
+                'sin': sin, 'cos': cos, 'tan': tan
+            }
+            
+            try:
+                U = sympify(utility_str, locals=local_dict)
+            except Exception as e:
+                raise ValueError(f"Error al interpretar la función: {str(e)}")
+            
+            # Calcular óptimo inicial
+            x0, y0, u0 = self.solve_optimal_bundle(U, p1, p2, m, x, y)
+            
+            # Calcular óptimo final
+            p1_final = new_price if changed_price == "p1" else p1
+            p2_final = new_price if changed_price == "p2" else p2
+            xf, yf, uf = self.solve_optimal_bundle(U, p1_final, p2_final, m, x, y)
+            
+            # Slutsky: compensación para permitir cesta original
+            m_slutsky = p1_final*x0 + p2_final*y0
+            xs, ys, _ = self.solve_optimal_bundle(U, p1_final, p2_final, m_slutsky, x, y)
+            
+            # Graficar
+            fig, ax = plt.subplots(figsize=(10, 6))
+            
+            # Restricciones presupuestarias
+            x_max = max(m/p1, m/p1_final, x0, xf, xs)*1.2
+            y_max = max(m/p2, m/p2_final, y0, yf, ys)*1.2
+            
+            # RP inicial
+            x_rp0 = np.linspace(0, m/p1, 100)
+            y_rp0 = (m - p1*x_rp0)/p2
+            ax.plot(x_rp0, y_rp0, 'r-', label='RP Inicial')
+            
+            # RP final
+            x_rpf = np.linspace(0, m/p1_final, 100)
+            y_rpf = (m - p1_final*x_rpf)/p2_final
+            ax.plot(x_rpf, y_rpf, 'g-', label='RP Final')
+            
+            # RP Slutsky
+            x_rps = np.linspace(0, m_slutsky/p1_final, 100)
+            y_rps = (m_slutsky - p1_final*x_rps)/p2_final
+            ax.plot(x_rps, y_rps, 'b--', label='RP Slutsky')
+            
+            # Puntos óptimos
+            ax.scatter(x0, y0, color='blue', s=100, label=f'E0 ({x0:.2f}, {y0:.2f})')
+            ax.scatter(xf, yf, color='green', s=100, label=f'EF ({xf:.2f}, {yf:.2f})')
+            ax.scatter(xs, ys, color='red', s=100, label=f'ES ({xs:.2f}, {ys:.2f})')
+            
+            # Curva de indiferencia inicial
+            self.plot_indifference_curve(ax, U, u0, x, y, x_max, y_max)
+            
+            ax.set_xlim(0, x_max)
+            ax.set_ylim(0, y_max)
+            ax.set_xlabel('Bien X')
+            ax.set_ylabel('Bien Y')
+            ax.legend()
+            ax.grid(True)
+            
+            # Mostrar gráfico
+            canvas = FigureCanvasTkAgg(fig, master=self.results_frame)
+            canvas.draw()
+            toolbar = NavigationToolbar2Tk(canvas, self.results_frame)
+            toolbar.update()
+            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            
+            # Mostrar resultados numéricos
+            results_text = f"""
+RESULTADOS:
+
+Óptimo Inicial (E0):
+  x = {x0:.2f}, y = {y0:.2f}, U = {u0:.2f}
+
+Óptimo Final (EF):
+  x = {xf:.2f}, y = {yf:.2f}, U = {uf:.2f}
+
+Punto Slutsky (ES):
+  x = {xs:.2f}, y = {ys:.2f}
+
+Efecto Total (ET):
+  Δx = {xf - x0:.2f}, Δy = {yf - y0:.2f}
+
+Efecto Sustitución (Slutsky):
+  Δx = {xs - x0:.2f}, Δy = {ys - y0:.2f}
+
+Efecto Ingreso (Slutsky):
+  Δx = {xf - xs:.2f}, Δy = {yf - ys:.2f}
+"""
+            text_widget = tk.Text(self.results_frame, wrap=tk.WORD, height=10)
+            text_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            text_widget.insert(tk.END, results_text)
+            text_widget.config(state=tk.DISABLED)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Error en el cálculo: {str(e)}")
+
+    def plot_indifference_curve(self, ax, U_sym, u_level, x_sym, y_sym, x_max, y_max):
+        """Dibuja una curva de indiferencia para un nivel de utilidad dado."""
+        try:
+            # Para complementarios perfectos: forma de L
+            if U_sym.has(Min):
+                # Obtener los argumentos de Min
+                min_args = U_sym.args if U_sym.func == Min else None
+                if min_args is None:
+                    # Asumir Min(x,y) por simplicidad
+                    a = 1
+                    b = 1
+                else:
+                    a_expr, b_expr = min_args
+                    a = float(a_expr.coeff(x_sym)) if x_sym in a_expr.free_symbols else 1.0
+                    b = float(b_expr.coeff(y_sym)) if y_sym in b_expr.free_symbols else 1.0
+                
+                x_corner = u_level / a
+                y_corner = u_level / b
+                ax.plot([x_corner, x_corner], [0, y_corner], 'b-')
+                ax.plot([0, x_corner], [y_corner, y_corner], 'b-', label=f'U={u_level:.2f}')
+            else:
+                # Para otras funciones
+                x_vals = np.linspace(0.1, x_max, 100)
+                y_vals = []
+                
+                # Crear función numérica para resolver
+                U_func = lambdify((x_sym, y_sym), U_sym, modules=['numpy'])
+                
+                for x_val in x_vals:
+                    try:
+                        # Resolver U(x_val, y) = u_level para y
+                        y_sol = nsolve(Eq(U_sym.subs(x_sym, x_val), u_level), y_sym, y_max/2)
+                        y_vals.append(float(y_sol))
+                    except:
+                        y_vals.append(np.nan)
+                
+                # Filtrar valores válidos
+                valid_indices = [i for i, y_val in enumerate(y_vals) if not np.isnan(y_val) and 0 <= y_val <= y_max]
+                if valid_indices:
+                    valid_x = [x_vals[i] for i in valid_indices]
+                    valid_y = [y_vals[i] for i in valid_indices]
+                    ax.plot(valid_x, valid_y, 'b-', label=f'U={u_level:.2f}')
+        except:
+            pass
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ConsumerTheoryApp(root)
+    root.mainloop()
