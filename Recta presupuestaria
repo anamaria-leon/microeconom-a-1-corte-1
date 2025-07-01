@@ -1,0 +1,578 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jun 26 21:18:07 2025
+
+@author: usuario
+"""
+import tkinter as tk
+from tkinter import ttk, messagebox
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
+
+class BudgetConstraintApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Teoría del Consumidor - Restricciones Presupuestarias")
+        self.root.geometry("1200x800")
+        
+        # Notebook principal
+        self.main_notebook = ttk.Notebook(root)
+        self.main_notebook.pack(fill='both', expand=True)
+        
+        # Pestaña teórica (que contendrá sub-pestañas)
+        self.theory_tab = ttk.Frame(self.main_notebook)
+        self.main_notebook.add(self.theory_tab, text="Teoría y Ejemplos")
+        
+        # Pestaña interactiva
+        self.interactive_tab = ttk.Frame(self.main_notebook)
+        self.main_notebook.add(self.interactive_tab, text="Calculadora Personalizada")
+        
+        # Configurar las sub-pestañas teóricas
+        self.setup_theory_tabs()
+        
+        # Configurar la pestaña interactiva
+        self.setup_interactive_tab()
+    
+    def setup_theory_tabs(self):
+        """Configura las sub-pestañas dentro de la pestaña teórica"""
+        theory_notebook = ttk.Notebook(self.theory_tab)
+        theory_notebook.pack(fill='both', expand=True)
+        
+        # Crear las pestañas teóricas
+        self.create_theory_tab(theory_notebook)
+        self.create_basic_example_tab(theory_notebook)
+        self.create_income_price_changes_tab(theory_notebook)
+        self.create_taxes_subsidies_tab(theory_notebook)
+        self.create_coupon_example_tab(theory_notebook)
+    
+    def create_theory_tab(self, notebook):
+        """Pestaña con la teoría básica"""
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Teoría Básica")
+        
+        # Texto explicativo
+        theory_text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10)
+        theory_text.pack(fill='both', expand=True)
+        
+        theory_content = """
+TEORÍA DE LAS RESTRICCIONES PRESUPUESTARIAS
+
+La restricción presupuestaria representa todas las combinaciones de bienes que un consumidor puede adquirir 
+dado su ingreso y los precios de los bienes.
+
+Ecuación básica:
+p₁x₁ + p₂x₂ = m
+
+Donde:
+- p₁, p₂: precios de los bienes 1 y 2
+- x₁, x₂: cantidades consumidas de los bienes 1 y 2
+- m: ingreso disponible
+
+La pendiente de la recta presupuestaria es -p₁/p₂, que representa el costo de oportunidad de un bien en términos del otro.
+
+Conjunto presupuestario: Todas las combinaciones de bienes que el consumidor puede adquirir sin exceder su ingreso.
+        """
+        theory_text.insert(tk.END, theory_content)
+        theory_text.config(state=tk.DISABLED)
+        
+        # Gráfico teórico
+        fig, ax = plt.subplots(figsize=(6, 4))
+        x = np.linspace(0, 100, 100)
+        y = 50 - 0.5*x  # Ejemplo con m=100, p1=1, p2=2
+        
+        ax.plot(x, y, 'b-', label='Recta presupuestaria')
+        ax.fill_between(x, 0, y, alpha=0.2, label='Conjunto presupuestario')
+        ax.set_xlabel('Bien 1 (x₁)')
+        ax.set_ylabel('Bien 2 (x₂)')
+        ax.set_title('Representación Gráfica')
+        ax.legend()
+        ax.grid(True)
+        
+        canvas = FigureCanvasTkAgg(fig, master=tab)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+    
+    def create_basic_example_tab(self, notebook):
+        """Pestaña con el ejemplo básico"""
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Ejemplo Básico")
+        
+        # Configuración inicial
+        m = 100
+        p1 = 1  # Libros
+        p2 = 2  # Otros bienes
+        
+        # Texto explicativo
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10)
+        text.pack(fill=tk.BOTH, expand=True)
+        
+        content = f"""
+EJEMPLO BÁSICO:
+- Ingreso (m): ${m}
+- Precio libros (P_L): ${p1}
+- Precio otros bienes (P_R): ${p2}
+
+Ecuación presupuestaria:
+{p1}*L + {p2}*R = {m}
+
+Pendiente de la recta: -P_L/P_R = -{p1/p2}
+
+Puntos de corte:
+- Máximo de libros (L): {m/p1} unidades (gastando todo en libros)
+- Máximo de otros bienes (R): {m/p2} unidades (gastando todo en otros bienes)
+
+Interpretación de la pendiente:
+Para comprar 1 libro más, debe renunciar a {p1/p2} unidades de otros bienes.
+        """
+        text.insert(tk.END, content)
+        text.config(state=tk.DISABLED)
+        
+        # Gráfico
+        fig, ax = plt.subplots(figsize=(6, 4))
+        x = np.linspace(0, m/p1, 100)
+        y = (m - p1*x)/p2
+        
+        ax.plot(x, y, 'b-', label='Recta presupuestaria')
+        ax.fill_between(x, 0, y, alpha=0.2, label='Conjunto presupuestario')
+        ax.set_xlabel('Libros (L)')
+        ax.set_ylabel('Otros bienes (R)')
+        ax.set_title('Restricción Presupuestaria Inicial')
+        ax.legend()
+        ax.grid(True)
+        
+        canvas = FigureCanvasTkAgg(fig, master=tab)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+    
+    def create_income_price_changes_tab(self, notebook):
+        """Pestaña con cambios en ingresos y precios"""
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Cambios en Ingresos y Precios")
+        
+        # Configuración
+        m_initial = 100
+        m_high = 150
+        p1_initial = 1
+        p1_high = 2
+        p2 = 2
+        
+        # Texto explicativo
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10)
+        text.pack(fill=tk.BOTH, expand=True)
+        
+        content = f"""
+EFECTO DE CAMBIOS EN INGRESOS Y PRECIOS:
+
+1. Aumento de ingreso (de ${m_initial} a ${m_high}):
+Nueva ecuación: {p1_initial}*L + {p2}*R = {m_high}
+- La recta se desplaza paralelamente hacia afuera
+- Pendiente se mantiene en -{p1_initial/p2}
+- Máximo de libros: {m_high/p1_initial}
+- Máximo de otros bienes: {m_high/p2}
+
+2. Aumento precio libros (de ${p1_initial} a ${p1_high}):
+Nueva ecuación: {p1_high}*L + {p2}*R = {m_initial}
+- La recta gira hacia adentro en el eje de libros
+- Nueva pendiente: -{p1_high/p2} (más inclinada)
+- Máximo de libros: {m_initial/p1_high}
+- Máximo de otros bienes se mantiene en {m_initial/p2}
+        """
+        text.insert(tk.END, content)
+        text.config(state=tk.DISABLED)
+        
+        # Gráfico comparativo
+        fig, ax = plt.subplots(figsize=(6, 4))
+        
+        # Recta inicial
+        x_initial = np.linspace(0, m_initial/p1_initial, 100)
+        y_initial = (m_initial - p1_initial*x_initial)/p2
+        ax.plot(x_initial, y_initial, 'b-', label='Inicial (m=100, PL=1)')
+        
+        # Recta con mayor ingreso
+        x_high = np.linspace(0, m_high/p1_initial, 100)
+        y_high = (m_high - p1_initial*x_high)/p2
+        ax.plot(x_high, y_high, 'g--', label='Mayor ingreso (m=150)')
+        
+        # Recta con mayor precio libros
+        x_price = np.linspace(0, m_initial/p1_high, 100)
+        y_price = (m_initial - p1_high*x_price)/p2
+        ax.plot(x_price, y_price, 'r-.', label='Mayor PL (PL=2)')
+        
+        ax.set_xlabel('Libros (L)')
+        ax.set_ylabel('Otros bienes (R)')
+        ax.set_title('Efecto de Cambios en Ingresos y Precios')
+        ax.legend()
+        ax.grid(True)
+        
+        canvas = FigureCanvasTkAgg(fig, master=tab)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+    
+    def create_taxes_subsidies_tab(self, notebook):
+        """Pestaña con impuestos y subsidios"""
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Impuestos y Subsidios")
+        
+        # Configuración
+        m = 100
+        p1 = 1
+        p2 = 2
+        subsidy = 25
+        per_unit_subsidy = 0.20
+        
+        # Texto explicativo
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10)
+        text.pack(fill=tk.BOTH, expand=True)
+        
+        content = f"""
+EFECTO DE IMPUESTOS Y SUBSIDIOS:
+
+1. Subsidio de ${subsidy} (ingreso adicional):
+Nueva ecuación: {p1}*L + {p2}*R = {m + subsidy}
+- La recta se desplaza paralelamente hacia afuera
+- Pendiente se mantiene en -{p1/p2}
+- Máximo de libros: {(m + subsidy)/p1}
+- Máximo de otros bienes: {(m + subsidy)/p2}
+
+2. Subsidio por unidad de ${per_unit_subsidy} por libro:
+Nuevo precio efectivo: ${p1 - per_unit_subsidy} por libro
+Nueva ecuación: {p1 - per_unit_subsidy}*L + {p2}*R = {m}
+- La recta gira hacia afuera en el eje de libros
+- Nueva pendiente: -{(p1 - per_unit_subsidy)/p2:.2f} (menos inclinada)
+- Máximo de libros: {m/(p1 - per_unit_subsidy):.1f}
+- Máximo de otros bienes se mantiene en {m/p2}
+        """
+        text.insert(tk.END, content)
+        text.config(state=tk.DISABLED)
+        
+        # Gráfico comparativo
+        fig, ax = plt.subplots(figsize=(6, 4))
+        
+        # Recta inicial
+        x_initial = np.linspace(0, m/p1, 100)
+        y_initial = (m - p1*x_initial)/p2
+        ax.plot(x_initial, y_initial, 'b-', label='Inicial')
+        
+        # Recta con subsidio global
+        x_subsidy = np.linspace(0, (m + subsidy)/p1, 100)
+        y_subsidy = ((m + subsidy) - p1*x_subsidy)/p2
+        ax.plot(x_subsidy, y_subsidy, 'g--', label=f'Subsidio ${subsidy}')
+        
+        # Recta con subsidio por unidad
+        x_unit = np.linspace(0, m/(p1 - per_unit_subsidy), 100)
+        y_unit = (m - (p1 - per_unit_subsidy)*x_unit)/p2
+        ax.plot(x_unit, y_unit, 'r-.', label=f'Subsidio ${per_unit_subsidy}/libro')
+        
+        ax.set_xlabel('Libros (L)')
+        ax.set_ylabel('Otros bienes (R)')
+        ax.set_title('Efecto de Subsidios')
+        ax.legend()
+        ax.grid(True)
+        
+        canvas = FigureCanvasTkAgg(fig, master=tab)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+    
+    def create_coupon_example_tab(self, notebook):
+        """Pestaña con el ejemplo de cupones"""
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Ejemplo de Cupones")
+        
+        # Configuración
+        m = 100
+        p1 = 1
+        p2 = 2
+        coupons = 25
+        
+        # Texto explicativo
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10)
+        text.pack(fill=tk.BOTH, expand=True)
+        
+        content = f"""
+EJEMPLO DE CUPONES PARA LIBROS:
+
+Situación inicial:
+- Ingreso: ${m}
+- Precio libros: ${p1}
+- Precio otros bienes: ${p2}
+
+El gobierno otorga {coupons} cupones que permiten obtener 1 libro gratis por cupón.
+
+Efecto:
+- Para los primeros {coupons} libros: precio efectivo = $0
+- Para libros adicionales: precio normal (${p1})
+
+Nueva restricción presupuestaria:
+- Si L ≤ {coupons}: {p2}*R ≤ {m} → R ≤ {m/p2}
+- Si L > {coupons}: {p1}*(L-{coupons}) + {p2}*R ≤ {m}
+
+Pendiente:
+- Para L ≤ {coupons}: 0 (línea horizontal)
+- Para L > {coupons}: -{p1/p2} (como antes)
+
+Máximos:
+- Máximo de otros bienes: {m/p2} (si L ≤ {coupons})
+- Máximo de libros: {coupons + m/p1} (si R=0)
+        """
+        text.insert(tk.END, content)
+        text.config(state=tk.DISABLED)
+        
+        # Gráfico
+        fig, ax = plt.subplots(figsize=(6, 4))
+        
+        # Segmento horizontal (cupones)
+        x1 = np.linspace(0, coupons, 100)
+        y1 = np.full_like(x1, m/p2)
+        ax.plot(x1, y1, 'b-')
+        
+        # Segmento inclinado (después de cupones)
+        x2 = np.linspace(coupons, coupons + m/p1, 100)
+        y2 = (m - p1*(x2 - coupons))/p2
+        ax.plot(x2, y2, 'b-', label='Con cupones')
+        
+        # Recta inicial para comparación
+        x_initial = np.linspace(0, m/p1, 100)
+        y_initial = (m - p1*x_initial)/p2
+        ax.plot(x_initial, y_initial, 'r--', label='Sin cupones')
+        
+        # Rellenar área factible
+        ax.fill_between(x1, 0, y1, alpha=0.2)
+        ax.fill_between(x2, 0, y2, alpha=0.2)
+        
+        ax.set_xlabel('Libros (L)')
+        ax.set_ylabel('Otros bienes (R)')
+        ax.set_title('Restricción Presupuestaria con Cupones')
+        ax.legend()
+        ax.grid(True)
+        
+        canvas = FigureCanvasTkAgg(fig, master=tab)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+    
+    def setup_interactive_tab(self):
+        """Configura la pestaña interactiva donde el usuario puede ingresar parámetros"""
+        # Frame principal con scroll
+        main_frame = ttk.Frame(self.interactive_tab)
+        main_frame.pack(fill='both', expand=True)
+        
+        # Canvas y scrollbar
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Variables para almacenar los inputs
+        self.p1_var = tk.DoubleVar(value=1.0)
+        self.p2_var = tk.DoubleVar(value=2.0)
+        self.m_initial_var = tk.DoubleVar(value=100.0)
+        self.m_final_var = tk.DoubleVar(value=100.0)
+        self.quantity_tax_var = tk.DoubleVar(value=0.0)
+        self.value_tax_var = tk.DoubleVar(value=0.0)
+        self.quantity_subsidy_var = tk.DoubleVar(value=0.0)
+        self.value_subsidy_var = tk.DoubleVar(value=0.0)
+        self.coupons_var = tk.IntVar(value=0)
+        
+        # Crear widgets de entrada
+        ttk.Label(scrollable_frame, text="Calculadora de Restricción Presupuestaria", 
+                 font=('Helvetica', 14, 'bold')).grid(row=0, column=0, columnspan=2, pady=10)
+        
+        # Sección de precios e ingresos
+        ttk.Label(scrollable_frame, text="Precios e Ingresos", font=('Helvetica', 12, 'bold')).grid(row=1, column=0, columnspan=2, sticky='w', pady=5)
+        
+        ttk.Label(scrollable_frame, text="Precio del Bien 1 (p₁):").grid(row=2, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.p1_var).grid(row=2, column=1, sticky='w', padx=5, pady=2)
+        
+        ttk.Label(scrollable_frame, text="Precio del Bien 2 (p₂):").grid(row=3, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.p2_var).grid(row=3, column=1, sticky='w', padx=5, pady=2)
+        
+        ttk.Label(scrollable_frame, text="Ingreso Inicial (m):").grid(row=4, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.m_initial_var).grid(row=4, column=1, sticky='w', padx=5, pady=2)
+        
+        ttk.Label(scrollable_frame, text="Ingreso Final (m'):").grid(row=5, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.m_final_var).grid(row=5, column=1, sticky='w', padx=5, pady=2)
+        
+        # Sección de impuestos
+        ttk.Label(scrollable_frame, text="Impuestos", font=('Helvetica', 12, 'bold')).grid(row=6, column=0, columnspan=2, sticky='w', pady=5)
+        
+        ttk.Label(scrollable_frame, text="Impuesto por cantidad sobre Bien 1:").grid(row=7, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.quantity_tax_var).grid(row=7, column=1, sticky='w', padx=5, pady=2)
+        
+        ttk.Label(scrollable_frame, text="Impuesto al valor sobre Bien 1 (%):").grid(row=8, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.value_tax_var).grid(row=8, column=1, sticky='w', padx=5, pady=2)
+        
+        # Sección de subsidios
+        ttk.Label(scrollable_frame, text="Subsidios", font=('Helvetica', 12, 'bold')).grid(row=9, column=0, columnspan=2, sticky='w', pady=5)
+        
+        ttk.Label(scrollable_frame, text="Subsidio por cantidad sobre Bien 1:").grid(row=10, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.quantity_subsidy_var).grid(row=10, column=1, sticky='w', padx=5, pady=2)
+        
+        ttk.Label(scrollable_frame, text="Subsidio al valor sobre Bien 1 (%):").grid(row=11, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.value_subsidy_var).grid(row=11, column=1, sticky='w', padx=5, pady=2)
+        
+        # Sección de cupones
+        ttk.Label(scrollable_frame, text="Cupones", font=('Helvetica', 12, 'bold')).grid(row=12, column=0, columnspan=2, sticky='w', pady=5)
+        
+        ttk.Label(scrollable_frame, text="Número de cupones para Bien 1:").grid(row=13, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(scrollable_frame, textvariable=self.coupons_var).grid(row=13, column=1, sticky='w', padx=5, pady=2)
+        
+        # Botón de cálculo
+        ttk.Button(scrollable_frame, text="Calcular Restricción Presupuestaria", 
+                  command=self.calculate_budget_constraint).grid(row=14, column=0, columnspan=2, pady=15)
+        
+        # Frame para resultados
+        self.results_frame = ttk.Frame(scrollable_frame)
+        self.results_frame.grid(row=15, column=0, columnspan=2, sticky='nsew')
+        
+        # Configurar el grid para que sea responsivo
+        for i in range(16):
+            scrollable_frame.grid_rowconfigure(i, weight=1)
+        scrollable_frame.grid_columnconfigure(0, weight=1)
+        scrollable_frame.grid_columnconfigure(1, weight=1)
+    
+    def calculate_budget_constraint(self):
+        """Calcula y muestra la restricción presupuestaria basada en los inputs del usuario"""
+        try:
+            # Obtener valores de los inputs
+            p1 = self.p1_var.get()
+            p2 = self.p2_var.get()
+            m_initial = self.m_initial_var.get()
+            m_final = self.m_final_var.get()
+            quantity_tax = self.quantity_tax_var.get()
+            value_tax = self.value_tax_var.get() / 100  # Convertir porcentaje a decimal
+            quantity_subsidy = self.quantity_subsidy_var.get()
+            value_subsidy = self.value_subsidy_var.get() / 100  # Convertir porcentaje a decimal
+            coupons = self.coupons_var.get()
+            
+            # Validar valores
+            if p1 <= 0 or p2 <= 0 or m_initial <= 0 or m_final <= 0:
+                raise ValueError("Precios e ingresos deben ser positivos")
+            
+            # Limpiar frame de resultados
+            for widget in self.results_frame.winfo_children():
+                widget.destroy()
+            
+            # Crear figura para el gráfico
+            fig, ax = plt.subplots(figsize=(8, 5))
+            
+            # Calcular restricciones presupuestarias
+            results_text = ""
+            
+            # 1. Restricción inicial sin impuestos/subsidios
+            if m_initial > 0:
+                x_initial = np.linspace(0, m_initial/p1, 100)
+                y_initial = (m_initial - p1*x_initial)/p2
+                ax.plot(x_initial, y_initial, 'b-', label=f'Inicial (m={m_initial})')
+                
+                results_text += f"\nRESTRICCIÓN INICIAL (m={m_initial}):\n"
+                results_text += f"Ecuación: {p1:.2f}x₁ + {p2:.2f}x₂ = {m_initial:.2f}\n"
+                results_text += f"Pendiente: -{p1/p2:.2f}\n"
+                results_text += f"Máximo x₁: {m_initial/p1:.2f}\n"
+                results_text += f"Máximo x₂: {m_initial/p2:.2f}\n"
+            
+            # 2. Restricción final con posibles impuestos/subsidios
+            effective_p1 = p1
+            
+            # Aplicar impuestos
+            if quantity_tax > 0:
+                effective_p1 += quantity_tax
+                results_text += f"\n+ Impuesto por cantidad: {quantity_tax:.2f} por unidad\n"
+            
+            if value_tax > 0:
+                effective_p1 *= (1 + value_tax)
+                results_text += f"\n+ Impuesto al valor: {value_tax*100:.2f}%\n"
+            
+            # Aplicar subsidios
+            if quantity_subsidy > 0:
+                effective_p1 -= quantity_subsidy
+                if effective_p1 < 0:
+                    effective_p1 = 0
+                results_text += f"\n+ Subsidio por cantidad: {quantity_subsidy:.2f} por unidad\n"
+            
+            if value_subsidy > 0:
+                effective_p1 *= (1 - value_subsidy)
+                results_text += f"\n+ Subsidio al valor: {value_subsidy*100:.2f}%\n"
+            
+            # Manejar cupones
+            if coupons > 0:
+                results_text += f"\n+ Cupones: {coupons} unidades gratis del Bien 1\n"
+                
+                # Segmento con cupones (x1 <= coupons)
+                x1 = np.linspace(0, coupons, 100)
+                y1 = np.full_like(x1, m_final/p2)
+                ax.plot(x1, y1, 'g-')
+                
+                # Segmento después de cupones (x1 > coupons)
+                if effective_p1 > 0:
+                    max_x1 = coupons + (m_final / effective_p1)
+                    x2 = np.linspace(coupons, max_x1, 100)
+                    y2 = (m_final - effective_p1*(x2 - coupons))/p2
+                    ax.plot(x2, y2, 'g-', label=f'Final con cupones (m={m_final})')
+                    
+                    results_text += f"\nRESTRICCIÓN FINAL CON CUPONES (m={m_final}):\n"
+                    results_text += f"Para x₁ ≤ {coupons}: {p2:.2f}x₂ ≤ {m_final:.2f}\n"
+                    results_text += f"Para x₁ > {coupons}: {effective_p1:.2f}(x₁-{coupons}) + {p2:.2f}x₂ ≤ {m_final:.2f}\n"
+                    results_text += f"Máximo x₁: {max_x1:.2f}\n"
+                    results_text += f"Máximo x₂: {m_final/p2:.2f} (si x₁ ≤ {coupons})\n"
+                else:
+                    # Si el precio efectivo es 0 (subsidio cubre todo el costo)
+                    ax.plot([coupons, coupons + 100], [m_final/p2, m_final/p2], 'g-', label=f'Final con cupones (m={m_final})')
+                    
+                    results_text += f"\nRESTRICCIÓN FINAL CON CUPONES (m={m_final}):\n"
+                    results_text += f"Para x₁ ≤ {coupons}: {p2:.2f}x₂ ≤ {m_final:.2f}\n"
+                    results_text += f"Para x₁ > {coupons}: x₂ ≤ {m_final/p2:.2f} (precio efectivo = 0)\n"
+                    results_text += f"Máximo x₁: ilimitado (con x₂ ≤ {m_final/p2:.2f})\n"
+                    results_text += f"Máximo x₂: {m_final/p2:.2f}\n"
+            else:
+                # Sin cupones
+                if m_final > 0:
+                    x_final = np.linspace(0, m_final/effective_p1, 100)
+                    y_final = (m_final - effective_p1*x_final)/p2
+                    ax.plot(x_final, y_final, 'g-', label=f'Final (m={m_final})')
+                    
+                    results_text += f"\nRESTRICCIÓN FINAL (m={m_final}):\n"
+                    results_text += f"Ecuación: {effective_p1:.2f}x₁ + {p2:.2f}x₂ = {m_final:.2f}\n"
+                    results_text += f"Pendiente: -{effective_p1/p2:.2f}\n"
+                    results_text += f"Máximo x₁: {m_final/effective_p1:.2f}\n"
+                    results_text += f"Máximo x₂: {m_final/p2:.2f}\n"
+            
+            # Configurar el gráfico
+            ax.set_xlabel('Bien 1 (x₁)')
+            ax.set_ylabel('Bien 2 (x₂)')
+            ax.set_title('Restricción Presupuestaria')
+            ax.legend()
+            ax.grid(True)
+            
+            # Mostrar el gráfico
+            canvas = FigureCanvasTkAgg(fig, master=self.results_frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            
+            # Mostrar resultados numéricos
+            results_label = tk.Text(self.results_frame, wrap=tk.WORD, height=10)
+            results_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            results_label.insert(tk.END, results_text)
+            results_label.config(state=tk.DISABLED)
+            
+        except ValueError as e:
+            messagebox.showerror("Error", f"Entrada inválida: {str(e)}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error: {str(e)}")
+
+# Crear y ejecutar la aplicación
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = BudgetConstraintApp(root)
+    root.mainloop()
