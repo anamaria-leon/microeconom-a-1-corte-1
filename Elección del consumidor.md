@@ -1,0 +1,1169 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+import numpy as np
+from sympy import symbols, diff, simplify, nsolve, Eq, log as ln, Min, Max, sqrt, sin, cos, tan, exp, pi, sympify, Add, Mul, Pow, S, Abs, solve
+import re # Import regular expressions for parsing
+from scipy.integrate import quad # For numerical integration (consumer surplus)
+
+class ConsumerTheoryApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Teoría del Consumidor - Calculadora Avanzada")
+        self.root.geometry("1400x950")
+        # Notebook principal
+        self.main_notebook = ttk.Notebook(root)
+        self.main_notebook.pack(fill='both', expand=True)
+        # Pestañas principales
+        self.create_theory_tab()
+        self.create_interactive_tab()
+    def create_theory_tab(self):
+        """Pestaña con la teoría y ejemplos"""
+        tab = ttk.Frame(self.main_notebook)
+        self.main_notebook.add(tab, text="Teoría y Ejemplos")
+        # Sub-pestañas dentro de la pestaña teórica
+        theory_notebook = ttk.Notebook(tab)
+        theory_notebook.pack(fill='both', expand=True)
+        # Crear las sub-pestañas teóricas
+        self.create_budget_constraint_tab(theory_notebook)
+        self.create_preferences_tab(theory_notebook)
+        self.create_indifference_curves_tab(theory_notebook)
+        self.create_mrs_tab(theory_notebook)
+        self.create_special_cases_tab(theory_notebook)
+        self.create_utility_functions_tab(theory_notebook)
+        self.create_income_substitution_tab(theory_notebook) # Existing
+        self.create_engel_curves_tab(theory_notebook) # NEW
+        self.create_demand_curves_tab(theory_notebook) # NEW
+        self.create_welfare_measures_tab(theory_notebook) # NEW: Consumer Surplus, VC, VE
+    # --- Existing Theory Tabs (unchanged for brevity) ---
+    def create_budget_constraint_tab(self, notebook):
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Restricción Presupuestaria")
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10); text.pack(fill='both', expand=True)
+        text.insert(tk.END, """
+**RESTRICCIÓN PRESUPUESTARIA**
+
+Define las combinaciones de bienes que un consumidor puede adquirir con un ingreso dado y a precios dados.
+Fórmula: $P_x \cdot x + P_y \cdot y = M$
+"""); text.config(state=tk.DISABLED)
+    def create_preferences_tab(self, notebook):
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Preferencias")
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10); text.pack(fill='both', expand=True)
+        text.insert(tk.END, """
+**PREFERENCIAS DEL CONSUMIDOR**
+
+Las preferencias se basan en los gustos y aversiones de los individuos. Suponemos que son:
+1.  **Completas**: El consumidor puede comparar y ordenar cualquier par de cestas de bienes.
+2.  **Transitiva**: Si A es preferida a B, y B es preferida a C, entonces A es preferida a C.
+3.  **No Saciedad (Más es Mejor)**: El consumidor siempre prefiere una mayor cantidad de un bien a una menor, ceteris paribus.
+"""); text.config(state=tk.DISABLED)
+
+    def create_indifference_curves_tab(self, notebook):
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Curvas de Indiferencia")
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10); text.pack(fill='both', expand=True)
+        text.insert(tk.END, """
+**CURVAS DE INDIFERENCIA**
+
+Representan todas las combinaciones de bienes que le proporcionan al consumidor el mismo nivel de satisfacción o utilidad.
+Características:
+* Tienen pendiente negativa (para bienes "buenos").
+* Son convexas al origen (RMS decreciente).
+* Las curvas no se cruzan.
+* Cuanto más alejada del origen, mayor es el nivel de utilidad.
+"""); text.config(state=tk.DISABLED)
+
+    def create_mrs_tab(self, notebook):
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Relación Marginal de Sustitución")
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10); text.pack(fill='both', expand=True)
+        text.insert(tk.END, """
+**RELACIÓN MARGINAL DE SUSTITUCIÓN (RMS)**
+
+Es la tasa a la que un consumidor está dispuesto a sustituir un bien por otro, manteniendo el mismo nivel de utilidad.
+Es el valor absoluto de la pendiente de la curva de indiferencia en un punto dado.
+Fórmula: $RMS_{x,y} = - \frac{dY}{dX} = \frac{UMg_x}{UMg_y}$
+En el óptimo del consumidor, la RMS es igual a la relación de precios: $RMS_{x,y} = \frac{P_x}{P_y}$
+"""); text.config(state=tk.DISABLED)
+    def create_special_cases_tab(self, notebook):
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Casos Especiales")
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10); text.pack(fill='both', expand=True)
+        text.insert(tk.END, """
+**CASOS ESPECIALES DE PREFERENCIAS**
+
+* **Sustitutos Perfectos**: Los bienes pueden sustituirse a una tasa constante (ej. $U(x,y) = ax + by$). Curvas de indiferencia lineales.
+* **Complementarios Perfectos**: Los bienes se consumen en proporciones fijas (ej. $U(x,y) = Min(ax, by)$). Curvas de indiferencia en forma de "L".
+* **Bienes Neutrales**: El consumidor es indiferente a consumir más o menos de uno de los bienes (ej. $U(x,y) = x$). Curvas de indiferencia verticales u horizontales.
+* **Bienes Malos**: Menos es preferible a más (ej. $U(x,y) = x - y$). Curvas de indiferencia con pendiente positiva.
+"""); text.config(state=tk.DISABLED)
+
+    def create_utility_functions_tab(self, notebook):
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Funciones de Utilidad")
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10); text.pack(fill='both', expand=True)
+        text.insert(tk.END, """
+**FUNCIONES DE UTILIDAD COMUNES**
+
+* **Cobb-Douglas**: $U(x,y) = x^a y^b$. Representa preferencias convexas.
+* **Cuasilineal**: $U(x,y) = f(x) + y$ o $U(x,y) = x + g(y)$. Una RMS que solo depende de una variable.
+* **CES (Elasticidad de Sustitución Constante)**: $U(x,y) = (ax^\rho + by^\rho)^{1/\rho}$. Incluye Cobb-Douglas y Sustitutos/Complementarios Perfectos como casos límite.
+"""); text.config(state=tk.DISABLED)
+
+    def create_income_substitution_tab(self, notebook):
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Efecto Ingreso y Sustitución")
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10)
+        text.pack(fill='both', expand=True)
+        content = """
+**EFECTO INGRESO Y EFECTO SUSTITUCIÓN**
+
+El **efecto total** de un cambio de precio se descompone en dos partes:
+
+1.  **Efecto Sustitución (ES)**: Mide el cambio en el consumo debido a la alteración de los precios relativos.
+    * **Hicks**: Mantiene el nivel de utilidad constante ($U_0$). Se traza una recta presupuestaria auxiliar paralela a la nueva BP pero tangente a la CI original.
+    * **Slutsky**: Mantiene el poder adquisitivo constante (el consumidor puede comprar la cesta original a los nuevos precios). Se traza una recta presupuestaria auxiliar paralela a la nueva BP y que pasa por el punto óptimo inicial ($E_0$).
+
+2.  **Efecto Ingreso (EI)**: Mide el cambio en el consumo debido a la alteración del poder adquisitivo (renta real).
+
+**Descomposición:** $ET = ES + EI$
+
+**Bienes Normales**: ES y EI tienen el mismo signo.
+**Bienes Inferiores**: ES y EI tienen signos opuestos.
+**Bienes Giffen**: Un tipo especial de bien inferior donde el EI es tan grande y opuesto al ES que el ET también es opuesto al ES (la demanda aumenta cuando su precio sube).
+"""
+        text.insert(tk.END, content); text.config(state=tk.DISABLED)
+    def create_engel_curves_tab(self, notebook):
+        """NEW: Pestaña para Curvas de Engel"""
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Curvas de Engel")
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10)
+        text.pack(fill='both', expand=True)
+        content = """
+**CURVAS DE ENGEL**
+
+Muestran la relación entre la cantidad demandada de un bien y el ingreso del consumidor, manteniendo constantes todos los precios y preferencias.
+
+* **Bienes Normales**: Pendiente positiva (a mayor ingreso, mayor consumo).
+* **Bienes Inferiores**: Pendiente negativa (a mayor ingreso, menor consumo).
+
+Para obtenerla, se grafica $m$ (ingreso) en el eje Y y $x$ (cantidad demandada) en el eje X, para una $x^*(p_x, p_y, m)$ dada.
+"""
+        text.insert(tk.END, content); text.config(state=tk.DISABLED)
+
+    def create_demand_curves_tab(self, notebook):
+        """NEW: Pestaña para Curvas de Demanda Marshalliana"""
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Curvas de Demanda")
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10)
+        text.pack(fill='both', expand=True)
+        content = """
+**CURVAS DE DEMANDA MARSHALLIANA**
+
+Muestran la relación entre el precio de un bien y la cantidad demandada de ese bien, manteniendo constantes el ingreso y los precios de otros bienes.
+
+* Generalmente, tienen **pendiente negativa** (Ley de la Demanda).
+* **Bienes Giffen**: Rara excepción con pendiente positiva, donde el efecto ingreso domina el efecto sustitución.
+
+Para obtenerla, se grafica $P_x$ (precio) en el eje Y y $x$ (cantidad demandada) en el eje X, para una $x^*(p_x, p_y, m)$ dada.
+"""
+        text.insert(tk.END, content); text.config(state=tk.DISABLED)
+
+    def create_welfare_measures_tab(self, notebook):
+        """NEW: Pestaña para Medidas de Bienestar (EC, VC, VE)"""
+        tab = ttk.Frame(notebook)
+        notebook.add(tab, text="Medidas de Bienestar")
+        text = tk.Text(tab, wrap=tk.WORD, padx=10, pady=10)
+        text.pack(fill='both', expand=True)
+        content = """
+**MEDIDAS DE BIENESTAR**
+
+1.  **Excedente del Consumidor (EC)**:
+    Es la diferencia entre el precio máximo que un consumidor está dispuesto a pagar por un bien y el precio que realmente paga. Es el área bajo la curva de demanda y por encima del precio.
+
+2.  **Variación Compensada (VC)**:
+    La cantidad de dinero que habría que darle (o quitarle) a un consumidor *después* de un cambio de precios para que alcance el nivel de utilidad **original**.
+    $VC = E(P_{new}, U_{old}) - M_{old}$
+
+3.  **Variación Equivalente (VE)**:
+    La cantidad de dinero que habría que darle (o quitarle) a un consumidor *antes* de un cambio de precios para que alcance el nivel de utilidad **final**.
+    $VE = M_{old} - E(P_{old}, U_{new})$
+
+Donde $E(P, U)$ es la Función de Gasto, que indica el ingreso mínimo necesario para alcanzar la utilidad $U$ a precios $P$.
+"""
+        text.insert(tk.END, content); text.config(state=tk.DISABLED)
+
+    def create_interactive_tab(self):
+        """Pestaña interactiva para cálculos personalizados"""
+        tab = ttk.Frame(self.main_notebook)
+        self.main_notebook.add(tab, text="Calculadora")
+        
+        # Frame principal con scroll
+        main_frame = ttk.Frame(tab)
+        main_frame.pack(fill='both', expand=True)
+        
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        self.scrollable_frame = ttk.Frame(canvas) # Make it an instance variable
+        
+        self.scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Variables para inputs
+        self.function_type = tk.StringVar(value="Cobb-Douglas")
+        self.utility_function_var = tk.StringVar(value="x**0.5 * y**0.5") # Default to Cobb-Douglas
+        self.p1_var = tk.DoubleVar(value=1.0)
+        self.p2_var = tk.DoubleVar(value=1.0) 
+        self.m_var = tk.DoubleVar(value=100.0)
+
+        self.changed_price_var = tk.StringVar(value="p1") 
+        self.new_price_val_var = tk.DoubleVar(value=2.0) 
+
+        # Input Widgets
+        ttk.Label(self.scrollable_frame, text="Calculadora de Teoría del Consumidor", 
+                 font=('Helvetica', 14, 'bold')).grid(row=0, column=0, columnspan=3, pady=10)
+        
+        ttk.Label(self.scrollable_frame, text="Tipo de Función:").grid(row=1, column=0, sticky='e', padx=5, pady=5)
+        function_menu = ttk.Combobox(self.scrollable_frame, textvariable=self.function_type,
+                                    values=["Cobb-Douglas", "Sustitutos Perfectos", 
+                                            "Complementarios Perfectos", "Cuasilineal", "Personalizada"])
+        function_menu.grid(row=1, column=1, sticky='ew', columnspan=2, padx=5, pady=5)
+        function_menu.bind("<<ComboboxSelected>>", self.update_function_example)
+        
+        ttk.Label(self.scrollable_frame, text="Función de Utilidad U(x,y):").grid(row=2, column=0, sticky='e', padx=5, pady=5)
+        util_entry = ttk.Entry(self.scrollable_frame, textvariable=self.utility_function_var, width=40)
+        util_entry.grid(row=2, column=1, sticky='ew', columnspan=2, padx=5, pady=5)
+        self.utility_entry = util_entry 
+        
+        ops_frame = ttk.Frame(self.scrollable_frame)
+        ops_frame.grid(row=3, column=0, columnspan=3, sticky='ew', pady=5, padx=5)
+        
+        operations = [
+            ('^', '**'), ('√', 'sqrt('), ('e', 'exp(1)'), ('π', 'pi'), 
+            ('ln', 'ln('), ('sin', 'sin('), ('cos', 'cos('), ('tan', 'tan('),
+            ('min', 'Min('), ('max', 'Max('), ('+', '+'), ('-', '-'),
+            ('*', '*'), ('/', '/'), ('(', '('), (')', ')')
+        ]
+        
+        num_cols = 6
+        for i, (text, op) in enumerate(operations):
+            btn = ttk.Button(ops_frame, text=text, width=5, 
+                            command=lambda o=op: self.insert_operation(self.utility_entry, o))
+            btn.grid(row=i//num_cols, column=i%num_cols, padx=1, pady=1, sticky='ew') 
+        for i in range(num_cols):
+            ops_frame.grid_columnconfigure(i, weight=1)
+        
+        # Precios e ingresos (obligatorios)
+        ttk.Label(self.scrollable_frame, text="Parámetros Iniciales:", 
+                 font=('Helvetica', 10, 'bold')).grid(row=4, column=0, columnspan=3, sticky='w', pady=10, padx=5)
+        
+        ttk.Label(self.scrollable_frame, text="Precio del Bien 1 (p₁):").grid(row=5, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(self.scrollable_frame, textvariable=self.p1_var, width=10).grid(row=5, column=1, sticky='w', padx=5, pady=2)
+        
+        ttk.Label(self.scrollable_frame, text="Precio del Bien 2 (p₂):").grid(row=6, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(self.scrollable_frame, textvariable=self.p2_var, width=10).grid(row=6, column=1, sticky='w', padx=5, pady=2)
+        
+        ttk.Label(self.scrollable_frame, text="Ingreso (m):").grid(row=7, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(self.scrollable_frame, textvariable=self.m_var, width=10).grid(row=7, column=1, sticky='w', padx=5, pady=2)
+        
+        # Campos para el cambio de precio (para calcular efectos, EC, VC, VE)
+        ttk.Label(self.scrollable_frame, text="Cambio de Precio (para efectos, EC, VC, VE):", 
+                 font=('Helvetica', 10, 'bold')).grid(row=8, column=0, columnspan=3, sticky='w', pady=10, padx=5)
+
+        ttk.Label(self.scrollable_frame, text="Precio a cambiar:").grid(row=9, column=0, sticky='e', padx=5, pady=2)
+        change_price_menu = ttk.Combobox(self.scrollable_frame, textvariable=self.changed_price_var,
+                                        values=["p1", "p2"])
+        change_price_menu.grid(row=9, column=1, sticky='ew', padx=5, pady=2)
+        
+        ttk.Label(self.scrollable_frame, text="Nuevo Valor del Precio:").grid(row=10, column=0, sticky='e', padx=5, pady=2)
+        ttk.Entry(self.scrollable_frame, textvariable=self.new_price_val_var, width=10).grid(row=10, column=1, sticky='w', padx=5, pady=2)
+
+        # Campos para rango de valores para las curvas
+        ttk.Label(self.scrollable_frame, text="Rangos para Curvas (opcional):", 
+                 font=('Helvetica', 10, 'bold')).grid(row=11, column=0, columnspan=3, sticky='w', pady=10, padx=5)
+        
+        ttk.Label(self.scrollable_frame, text="Rango de Ingreso (min, max):").grid(row=12, column=0, sticky='e', padx=5, pady=2)
+        self.m_range_min_var = tk.DoubleVar(value=50.0)
+        self.m_range_max_var = tk.DoubleVar(value=200.0)
+        ttk.Entry(self.scrollable_frame, textvariable=self.m_range_min_var, width=10).grid(row=12, column=1, sticky='w', padx=5, pady=2)
+        ttk.Entry(self.scrollable_frame, textvariable=self.m_range_max_var, width=10).grid(row=12, column=2, sticky='w', padx=5, pady=2)
+
+        ttk.Label(self.scrollable_frame, text="Rango de P1 (min, max):").grid(row=13, column=0, sticky='e', padx=5, pady=2)
+        self.p1_range_min_var = tk.DoubleVar(value=0.5)
+        self.p1_range_max_var = tk.DoubleVar(value=3.0)
+        ttk.Entry(self.scrollable_frame, textvariable=self.p1_range_min_var, width=10).grid(row=13, column=1, sticky='w', padx=5, pady=2)
+        ttk.Entry(self.scrollable_frame, textvariable=self.p1_range_max_var, width=10).grid(row=13, column=2, sticky='w', padx=5, pady=2)
+
+        ttk.Label(self.scrollable_frame, text="Rango de P2 (min, max):").grid(row=14, column=0, sticky='e', padx=5, pady=2)
+        self.p2_range_min_var = tk.DoubleVar(value=0.5)
+        self.p2_range_max_var = tk.DoubleVar(value=3.0)
+        ttk.Entry(self.scrollable_frame, textvariable=self.p2_range_min_var, width=10).grid(row=14, column=1, sticky='w', padx=5, pady=2)
+        ttk.Entry(self.scrollable_frame, textvariable=self.p2_range_max_var, width=10).grid(row=14, column=2, sticky='w', padx=5, pady=2)
+
+
+        # Botón de cálculo
+        ttk.Button(self.scrollable_frame, text="Calcular y Graficar", 
+                  command=self.calculate_and_plot).grid(row=15, column=0, columnspan=3, pady=15) 
+        
+        # Frame para resultados
+        self.results_frame = ttk.Frame(self.scrollable_frame)
+        self.results_frame.grid(row=16, column=0, columnspan=3, sticky='nsew', padx=10, pady=10)
+        
+        self.scrollable_frame.grid_columnconfigure(1, weight=1) 
+        for i in range(17): 
+            self.scrollable_frame.grid_rowconfigure(i, weight=0) 
+        self.scrollable_frame.grid_rowconfigure(16, weight=1) 
+
+    def insert_operation(self, entry_widget, operation):
+        """Inserta una operación matemática en el campo de entrada en la posición del cursor."""
+        current_text = entry_widget.get()
+        cursor_pos = entry_widget.index(tk.INSERT)
+        
+        text_to_insert = operation
+        offset = len(operation)
+
+        if operation.endswith('('):
+            text_to_insert = operation + ')'
+            offset = len(operation) # Cursor inside parenthesis
+        elif operation == 'Min(' or operation == 'Max(':
+            text_to_insert = operation + 'x, y)'
+            offset = len(operation) + 4 # Cursor after 'x, '
+        elif operation == '**':
+            text_to_insert = '**' # Just insert **
+            offset = 2
+        elif operation == 'exp(1)':
+            text_to_insert = 'exp(1)' # Just insert exp(1)
+            offset = len('exp(1)')
+
+        new_text = current_text[:cursor_pos] + text_to_insert + current_text[cursor_pos:]
+        entry_widget.delete(0, tk.END)
+        entry_widget.insert(0, new_text)
+        entry_widget.icursor(cursor_pos + offset)
+
+    def update_function_example(self, event=None):
+        """Actualiza el ejemplo de función según el tipo seleccionado"""
+        function_type = self.function_type.get()
+        
+        examples = {
+            "Cobb-Douglas": "x**0.5 * y**0.5",
+            "Sustitutos Perfectos": "x + y",
+            "Complementarios Perfectos": "Min(x, y)",
+            "Cuasilineal": "sqrt(x) + y",
+            "Personalizada": "x*y" 
+        }
+        
+        self.utility_function_var.set(examples.get(function_type, "x*y"))
+
+    def preprocess_utility_string(self, utility_str):
+        """
+        Pre-procesa la cadena de utilidad para insertar '*' donde hay multiplicación implícita.
+        Ej: '2x' -> '2*x', 'xy' -> 'x*y', 'x(y+1)' -> 'x*(y+1)'
+        """
+        # Add '*' between a digit and a variable/paren/function
+        utility_str = re.sub(r'(\d)([a-zA-Z(])', r'\1*\2', utility_str)
+        # Add '*' between a variable and a variable/paren/function
+        utility_str = re.sub(r'([a-zA-Z)])([a-zA-Z(])', r'\1*\2', utility_str)
+        
+        # Add '*' after pi or e before a variable or parenthesis
+        utility_str = re.sub(r'(pi|exp\(1\))([a-zA-Z(])', r'\1*\2', utility_str)
+        
+        # Add '*' before Min/Max/sqrt/ln if there's a preceding variable or number
+        utility_str = re.sub(r'([0-9a-zA-Z\)])(Min|Max|sqrt|ln|sin|cos|tan)\(', r'\1*\2(', utility_str)
+        
+        # Handle cases like x(y+1) -> x*(y+1)
+        utility_str = re.sub(r'([a-zA-Z])\(', r'\1*(', utility_str)
+
+        return utility_str
+
+    def get_function_characteristics(self, U_sym, x_sym, y_sym):
+        is_perfect_complements = U_sym.has(Min)
+        is_linear_utility = False
+        try:
+            # Check if it's a linear combination of x and y (e.g., ax + by)
+            # This is a bit more robust check for linear terms.
+            if U_sym.is_Add or U_sym.is_Mul: # For U=x+y or U=2*x
+                # Get coefficients of x and y. If U=x, coeff of y is 0. If U=x*y, not linear.
+                coeffs = U_sym.as_coefficients_dict()
+                if x_sym in coeffs and y_sym in coeffs and coeffs[x_sym].is_Number and coeffs[y_sym].is_Number:
+                    # If it's a simple sum/diff of x and y terms with constant coefficients, it's linear.
+                    is_linear_utility = True
+                elif x_sym in coeffs and not y_sym in U_sym.free_symbols and coeffs[x_sym].is_Number: # U(x,y)=ax
+                    is_linear_utility = True
+                elif y_sym in coeffs and not x_sym in U_sym.free_symbols and coeffs[y_sym].is_Number: # U(x,y)=by
+                    is_linear_utility = True
+        except:
+            pass # Not a simple linear function
+
+        return is_perfect_complements, is_linear_utility
+    
+    def solve_optimal_bundle(self, U_sym, p1_val, p2_val, m_val, x_sym, y_sym, is_perfect_complements, is_linear_utility):
+        """
+        Calcula el óptimo del consumidor (x,y) y el nivel de utilidad para una configuración dada de precios e ingreso.
+        """
+        
+        if is_perfect_complements: # U = Min(ax, by)
+            try:
+                a_comp, b_comp = 1, 1
+                if 'Min(' in str(U_sym):
+                    content_in_min = str(U_sym).split('Min(')[1].split(')')[0]
+                    parts = content_in_min.split(',')
+                    if len(parts) == 2:
+                        x_expr_str = parts[0].strip()
+                        y_expr_str = parts[1].strip()
+                        a_sym = sympify(x_expr_str.replace('x','1*x').replace('x',''), locals={x_sym:x_sym}) if 'x' in x_expr_str else S.One
+                        b_sym = sympify(y_expr_str.replace('y','1*y').replace('y',''), locals={y_sym:y_sym}) if 'y' in y_expr_str else S.One
+                        
+                        if a_sym.is_Number: a_comp = float(a_sym)
+                        if b_sym.is_Number: b_comp = float(b_sym)
+                        
+                x_opt = (m_val * b_comp) / (p1_val * b_comp + p2_val * a_comp)
+                y_opt = (m_val * a_comp) / (p1_val * b_comp + p2_val * a_comp)
+                
+                u_level = float(U_sym.subs({x_sym: x_opt, y_sym: y_opt}))
+                return x_opt, y_opt, u_level
+            except Exception as e:
+                return None, None, None
+
+        elif is_linear_utility: # Perfect substitutes U = ax + by
+            try:
+                a_sub = U_sym.diff(x_sym).subs({x_sym:1, y_sym:1}) 
+                b_sub = U_sym.diff(y_sym).subs({x_sym:1, y_sym:1}) 
+
+                if b_sub == 0: # U only depends on x (e.g., U=x or U=2x)
+                    x_opt = m_val / p1_val
+                    y_opt = 0
+                elif a_sub == 0: # U only depends on y
+                    x_opt = 0
+                    y_opt = m_val / p2_val
+                else:
+                    price_ratio = p1_val / p2_val
+                    rms_ratio = Abs(a_sub / b_sub) 
+                    
+                    if rms_ratio > price_ratio: # Consume only X
+                        x_opt = m_val / p1_val
+                        y_opt = 0
+                    elif rms_ratio < price_ratio: # Consume only Y
+                        x_opt = 0
+                        y_opt = m_val / p2_val
+                    else: # Any point on budget line is optimal (choose midpoint for a unique point)
+                        x_opt = m_val / (2 * p1_val) 
+                        y_opt = (m_val - p1_val * x_opt) / p2_val
+                        
+                u_level = float(U_sym.subs({x_sym: x_opt, y_sym: y_opt}))
+                return x_opt, y_opt, u_level
+            except Exception as e:
+                return None, None, None
+
+        else: # Cobb-Douglas, Quasilinear, or general differentiable functions
+            try:
+                umg_x_func = diff(U_sym, x_sym)
+                umg_y_func = diff(U_sym, y_sym)
+                
+                # Attempt interior solution
+                if umg_y_func == 0: 
+                    x_opt = m_val / p1_val
+                    y_opt = 0
+                elif umg_x_func == 0: 
+                    x_opt = 0
+                    y_opt = m_val / p2_val
+                else:
+                    eq1 = Eq(umg_x_func / umg_y_func, p1_val / p2_val)
+                    eq2 = Eq(p1_val * x_sym + p2_val * y_sym, m_val)
+                    
+                    x_guess = m_val / (2 * p1_val)
+                    y_guess = m_val / (2 * p2_val)
+
+                    try:
+                        sol = nsolve((eq1, eq2), (x_sym, y_sym), (x_guess, y_guess), verify=False)
+                        x_sol_tentative = float(sol[0])
+                        y_sol_tentative = float(sol[1])
+                        
+                        if x_sol_tentative >= -1e-9 and y_sol_tentative >= -1e-9:
+                            x_opt = max(0, x_sol_tentative)
+                            y_opt = max(0, y_sol_tentative)
+                        else: # If interior is negative, try corner solutions
+                            x_opt = None
+                            y_opt = None
+                            # Fallback: simple corner solutions check for positive marginal utilities
+                            # Evaluate utility at corners:
+                            U_at_x_corner = U_sym.subs({x_sym: m_val/p1_val, y_sym: 0})
+                            U_at_y_corner = U_sym.subs({x_sym: 0, y_sym: m_val/p2_val})
+
+                            if float(U_at_x_corner) > float(U_at_y_corner):
+                                x_opt = m_val / p1_val
+                                y_opt = 0
+                            else:
+                                x_opt = 0
+                                y_opt = m_val / p2_val
+                    except (ValueError, TypeError): 
+                        # Fallback for nsolve failure: consider corners
+                        x_opt = None
+                        y_opt = None
+                        # Evaluate utility at corners:
+                        U_at_x_corner = U_sym.subs({x_sym: m_val/p1_val, y_sym: 0})
+                        U_at_y_corner = U_sym.subs({x_sym: 0, y_sym: m_val/p2_val})
+
+                        if U_at_x_corner is not None and U_at_y_corner is not None:
+                            if float(U_at_x_corner) > float(U_at_y_corner):
+                                x_opt = m_val / p1_val
+                                y_opt = 0
+                            else:
+                                x_opt = 0
+                                y_opt = m_val / p2_val
+                        else:
+                            x_opt = None # Still no solution
+
+                if x_opt is not None and y_opt is not None:
+                    u_level = float(U_sym.subs({x_sym: x_opt, y_sym: y_opt}))
+                    return x_opt, y_opt, u_level
+                else:
+                    return None, None, None
+            except Exception as e:
+                return None, None, None
+
+    def calculate_marshallian_demand(self, U_sym, x_sym, y_sym, p1_sym, p2_sym, m_sym, is_perfect_complements, is_linear_utility):
+        """
+        Deriva las funciones de demanda marshallianas (simbólicas).
+        Devuelve (x_demand, y_demand) en términos de p1_sym, p2_sym, m_sym.
+        """
+        if is_perfect_complements:
+            # U = Min(ax,by) -> ax=by -> y = (a/b)x
+            # P1*x + P2*(a/b)x = m -> x(P1 + P2*a/b) = m
+            # x = m / (P1 + P2*a/b) = m*b / (P1*b + P2*a)
+            # y = m*a / (P1*b + P2*a)
+            a_comp, b_comp = 1, 1
+            if 'Min(' in str(U_sym):
+                content_in_min = str(U_sym).split('Min(')[1].split(')')[0]
+                parts = content_in_min.split(',')
+                if len(parts) == 2:
+                    x_expr_str = parts[0].strip()
+                    y_expr_str = parts[1].strip()
+                    a_sym = sympify(x_expr_str.replace('x','1*x').replace('x',''), locals={x_sym:x_sym}) if 'x' in x_expr_str else S.One
+                    b_sym = sympify(y_expr_str.replace('y','1*y').replace('y',''), locals={y_sym:y_sym}) if 'y' in y_expr_str else S.One
+                    
+                    if a_sym.is_Number: a_comp = a_sym
+                    if b_sym.is_Number: b_comp = b_sym
+
+            x_demand = m_sym * b_comp / (p1_sym * b_comp + p2_sym * a_comp)
+            y_demand = m_sym * a_comp / (p1_sym * b_comp + p2_sym * a_comp)
+            return simplify(x_demand), simplify(y_demand)
+
+        elif is_linear_utility:
+            # U = ax + by. Corner solutions depending on price ratio.
+            a_sub = U_sym.diff(x_sym).subs({x_sym:1, y_sym:1}) 
+            b_sub = U_sym.diff(y_sym).subs({x_sym:1, y_sym:1}) 
+
+            if b_sub == 0: # U depends only on x
+                x_demand = m_sym / p1_sym
+                y_demand = 0
+            elif a_sub == 0: # U depends only on y
+                x_demand = 0
+                y_demand = m_sym / p2_sym
+            else:
+                # Symbolic conditions for corner solutions are hard to express with a single function.
+                # Here we return conditional expressions or a "default" if equality holds.
+                # For practical plotting/evaluation, we'll evaluate these conditions.
+                # This is a simplified representation.
+                x_demand = m_sym / p1_sym if Abs(a_sub/b_sub) > p1_sym/p2_sym else (0 if Abs(a_sub/b_sub) < p1_sym/p2_sym else m_sym/(2*p1_sym))
+                y_demand = m_sym / p2_sym if Abs(a_sub/b_sub) < p1_sym/p2_sym else (0 if Abs(a_sub/b_sub) > p1_sym/p2_sym else m_sym/(2*p2_sym))
+            
+            return simplify(x_demand), simplify(y_demand)
+
+        else: # General differentiable functions (Cobb-Douglas, Quasilinear, etc.)
+            umg_x = diff(U_sym, x_sym)
+            umg_y = diff(U_sym, y_sym)
+
+            try:
+                # Solve MRS = Px/Py and Budget Constraint
+                eq_mrs = Eq(umg_x / umg_y, p1_sym / p2_sym)
+                eq_budget = Eq(p1_sym * x_sym + p2_sym * y_sym, m_sym)
+                
+                # Solve for x and y symbolically
+                sol = solve((eq_mrs, eq_budget), (x_sym, y_sym))
+                if sol and isinstance(sol, dict):
+                    x_demand = sol.get(x_sym, None)
+                    y_demand = sol.get(y_sym, None)
+                    if x_demand is not None and y_demand is not None:
+                        return simplify(x_demand), simplify(y_demand)
+                elif sol and isinstance(sol, list) and sol[0] and isinstance(sol[0], tuple): # If solve returns a list of tuples
+                    x_demand = sol[0][0]
+                    y_demand = sol[0][1]
+                    return simplify(x_demand), simplify(y_demand)
+
+            except Exception as e:
+                pass # Symbolic solve might fail for complex functions
+
+            # Fallback for cases where solve doesn't return a simple solution
+            # For complex functions, this might need numerical evaluation at each point
+            return None, None # Indicate that symbolic demand could not be found
+
+    def calculate_hicksian_demand(self, U_sym, x_sym, y_sym, p1_sym, p2_sym, u_level_sym, is_perfect_complements, is_linear_utility):
+        """
+        Deriva las funciones de demanda hicksianas (simbólicas).
+        Devuelve (x_hicksian_demand, y_hicksian_demand) en términos de p1_sym, p2_sym, u_level_sym.
+        """
+        if is_perfect_complements:
+            # U = Min(ax,by). To maintain utility u_level, we need ax=u_level and by=u_level.
+            # So x = u_level/a, y = u_level/b.
+            # Hicksian demand is independent of prices in this case.
+            a_comp, b_comp = 1, 1
+            if 'Min(' in str(U_sym):
+                content_in_min = str(U_sym).split('Min(')[1].split(')')[0]
+                parts = content_in_min.split(',')
+                if len(parts) == 2:
+                    x_expr_str = parts[0].strip()
+                    y_expr_str = parts[1].strip()
+                    a_sym = sympify(x_expr_str.replace('x','1*x').replace('x',''), locals={x_sym:x_sym}) if 'x' in x_expr_str else S.One
+                    b_sym = sympify(y_expr_str.replace('y','1*y').replace('y',''), locals={y_sym:y_sym}) if 'y' in y_expr_str else S.One
+                    
+                    if a_sym.is_Number: a_comp = a_sym
+                    if b_sym.is_Number: b_comp = b_sym
+            
+            x_hicks = u_level_sym / a_comp if a_comp != 0 else S.Zero
+            y_hicks = u_level_sym / b_comp if b_comp != 0 else S.Zero
+            return simplify(x_hicks), simplify(y_hicks)
+
+        elif is_linear_utility:
+            a_sub = U_sym.diff(x_sym).subs({x_sym:1, y_sym:1}) 
+            b_sub = U_sym.diff(y_sym).subs({x_sym:1, y_sym:1}) 
+
+            if b_sub == 0: # U only depends on x
+                x_hicks = u_level_sym / a_sub
+                y_hicks = S.Zero
+            elif a_sub == 0: # U only depends on y
+                x_hicks = S.Zero
+                y_hicks = u_level_sym / b_sub
+            else:
+                # Hicksian demand for perfect substitutes is usually a corner solution or a range.
+                # Similar to Marshallian, this is simplified.
+                x_hicks = u_level_sym / a_sub if Abs(a_sub/b_sub) > p1_sym/p2_sym else S.Zero
+                y_hicks = u_level_sym / b_sub if Abs(a_sub/b_sub) < p1_sym/p2_sym else S.Zero
+            return simplify(x_hicks), simplify(y_hicks)
+
+        else: # General differentiable functions
+            umg_x = diff(U_sym, x_sym)
+            umg_y = diff(U_sym, y_sym)
+
+            try:
+                # Solve MRS = Px/Py and U(x,y) = u_level_sym
+                eq_mrs = Eq(umg_x / umg_y, p1_sym / p2_sym)
+                eq_utility = Eq(U_sym, u_level_sym)
+                
+                sol = solve((eq_mrs, eq_utility), (x_sym, y_sym))
+                if sol and isinstance(sol, dict):
+                    x_hicks = sol.get(x_sym, None)
+                    y_hicks = sol.get(y_sym, None)
+                    if x_hicks is not None and y_hicks is not None:
+                        return simplify(x_hicks), simplify(y_hicks)
+                elif sol and isinstance(sol, list) and sol[0] and isinstance(sol[0], tuple):
+                    x_hicks = sol[0][0]
+                    y_hicks = sol[0][1]
+                    return simplify(x_hicks), simplify(y_hicks)
+            except Exception as e:
+                pass # Symbolic solve might fail
+
+            return None, None # Indicate symbolic Hicksian demand not found
+
+    def calculate_expenditure_function(self, x_hicks, y_hicks, p1_sym, p2_sym):
+        """
+        Calcula la función de gasto E(p1, p2, U) = p1*xh + p2*yh.
+        Requiere las funciones de demanda hicksianas simbólicas.
+        """
+        if x_hicks is None or y_hicks is None:
+            return None
+        return simplify(p1_sym * x_hicks + p2_sym * y_hicks)
+
+    def calculate_and_plot(self):
+        """Calcula y grafica según los inputs del usuario, incluyendo efectos de ingreso/sustitución, curvas y bienestar."""
+        try:
+            for widget in self.results_frame.winfo_children():
+                widget.destroy()
+
+            # --- 1. Get User Inputs and SymPy Setup ---
+            x, y, p1_sym, p2_sym, m_sym, u_level_sym = symbols('x y p1 p2 m u_level')
+            
+            utility_fn_str_raw = self.utility_function_var.get()
+            utility_fn_str = self.preprocess_utility_string(utility_fn_str_raw)
+            U = sympify(utility_fn_str, locals={'x': x, 'y': y, 'Min': Min, 'Max': Max, 'sqrt': sqrt, 
+                                                'ln': ln, 'sin': sin, 'cos': cos, 'tan': tan, 'exp': exp, 'pi': pi})
+            if not U.has(x) and not U.has(y):
+                raise ValueError("La función de utilidad debe depender de 'x' o 'y'.")
+            
+            is_perfect_complements, is_linear_utility = self.get_function_characteristics(U, x, y)
+
+            # Numerical values for calculations
+            p1_orig = self.p1_var.get()
+            p2_orig = self.p2_var.get()
+            m_orig = self.m_var.get()
+            changed_price = self.changed_price_var.get()
+            new_price_val = self.new_price_val_var.get()
+
+            # Validate inputs
+            if not utility_fn_str: raise ValueError("La función de utilidad es obligatoria.")
+            if p1_orig <= 0 or p2_orig <= 0 or m_orig <= 0 or new_price_val <= 0:
+                raise ValueError("Precios e ingreso deben ser positivos.")
+            
+            # --- 2. Optimal Bundles and Utility Levels ---
+            x0, y0, u0 = self.solve_optimal_bundle(U, p1_orig, p2_orig, m_orig, x, y, is_perfect_complements, is_linear_utility)
+            if x0 is None or y0 is None: raise Exception("No se pudo encontrar el óptimo inicial.")
+
+            p1_f, p2_f = p1_orig, p2_orig
+            if changed_price == "p1": p1_f = new_price_val
+            else: p2_f = new_price_val
+            xf, yf, uf = self.solve_optimal_bundle(U, p1_f, p2_f, m_orig, x, y, is_perfect_complements, is_linear_utility)
+            if xf is None or yf is None: raise Exception("No se pudo encontrar el óptimo final.")
+
+            # --- 3. Marshallian Demand Functions (Symbolic) ---
+            x_m_demand_sym, y_m_demand_sym = self.calculate_marshallian_demand(U, x, y, p1_sym, p2_sym, m_sym, is_perfect_complements, is_linear_utility)
+            
+            # --- 4. Slutsky Decomposition ---
+            m_slutsky = p1_f * x0 + p2_f * y0
+            xs, ys, us = self.solve_optimal_bundle(U, p1_f, p2_f, m_slutsky, x, y, is_perfect_complements, is_linear_utility)
+            if xs is None or ys is None: raise Exception("No se pudo encontrar el óptimo intermedio de Slutsky.")
+            
+            # --- 5. Hicks Decomposition (Intermediate Point and Compensated Income) ---
+            xh, yh, mh = None, None, None # Initialize Hicks intermediate values
+            x_hicks_demand_sym, y_hicks_demand_sym = None, None
+            
+            if not is_perfect_complements and not is_linear_utility:
+                x_hicks_demand_sym, y_hicks_demand_sym = self.calculate_hicksian_demand(U, x, y, p1_sym, p2_sym, u_level_sym, is_perfect_complements, is_linear_utility)
+                if x_hicks_demand_sym is not None and y_hicks_demand_sym is not None:
+                    try:
+                        # Evaluate Hicksian demand at new prices and original utility
+                        xh = float(x_hicks_demand_sym.subs({p1_sym: p1_f, p2_sym: p2_f, u_level_sym: u0}))
+                        yh = float(y_hicks_demand_sym.subs({p1_sym: p1_f, p2_sym: p2_f, u_level_sym: u0}))
+                        if xh < -1e-9 or yh < -1e-9: # Ensure positive quantities
+                            raise ValueError("Hicksian demand resulted in negative quantities.")
+                        xh = max(0, xh)
+                        yh = max(0, yh)
+                        mh = p1_f * xh + p2_f * yh
+                    except Exception as e:
+                        messagebox.showwarning("Advertencia", f"No se pudo evaluar la demanda Hicksiana simbólica para Eh. Error: {e}")
+                        xh, yh, mh = None, None, None
+                else:
+                    messagebox.showwarning("Advertencia", "No se pudo obtener la función de demanda Hicksiana simbólica. El cálculo de Eh podría ser inexacto o no disponible.")
+                    # Fallback to numerical nsolve if symbolic fails (less robust)
+                    try:
+                        umg_x_func = diff(U, x)
+                        umg_y_func = diff(U, y)
+                        eq_hicks1 = Eq(umg_x_func / umg_y_func, p1_f / p2_f)
+                        eq_hicks2 = Eq(U, u0)
+                        sol_hicks = nsolve((eq_hicks1, eq_hicks2), (x, y), (x0, y0), verify=False)
+                        xh_temp = float(sol_hicks[0])
+                        yh_temp = float(sol_hicks[1])
+                        if xh_temp >= -1e-9 and yh_temp >= -1e-9:
+                            xh = max(0, xh_temp)
+                            yh = max(0, yh_temp)
+                            mh = p1_f * xh + p2_f * yh
+                        else: raise ValueError("Solución de Hicks negativa.")
+                    except Exception as e:
+                        messagebox.showwarning("Advertencia", f"No se pudo calcular el óptimo intermedio de Hicks. Error: {e}")
+
+            elif is_linear_utility:
+                # Hicksian for perfect substitutes: if price ratio changes, it's a corner.
+                # If new price ratio causes consumption of only one good, the compensated point is that amount.
+                a_sub = U.diff(x).subs({x:1,y:1})
+                b_sub = U.diff(y).subs({x:1,y:1})
+                rms_ratio = Abs(a_sub / b_sub)
+                new_price_ratio = p1_f / p2_f
+
+                if rms_ratio > new_price_ratio: # Prefer X at new prices
+                    xh = u0 / a_sub if a_sub != 0 else x0 # if a_sub=0 and it was x only, then it remains x0
+                    yh = 0
+                elif rms_ratio < new_price_ratio: # Prefer Y at new prices
+                    xh = 0
+                    yh = u0 / b_sub if b_sub != 0 else y0
+                else: # Still indifferent to both or original point
+                    xh = x0 # Simplification, as any point on original IC is OK
+                    yh = y0
+                
+                mh = p1_f * xh + p2_f * yh # Income to keep original point at new prices, for Hicks
+
+            elif is_perfect_complements: # Hicksian substitution effect is usually zero
+                xh, yh = x0, y0
+                mh = p1_f * xh + p2_f * yh # Income to keep original point at new prices, for Hicks
+
+            # --- 6. Calculate Effects ---
+            total_effect_x = xf - x0
+            total_effect_y = yf - y0
+            slutsky_es_x = xs - x0
+            slutsky_es_y = ys - y0
+            slutsky_ei_x = xf - xs
+            slutsky_ei_y = yf - ys
+            
+            hicks_es_x, hicks_es_y, hicks_ei_x, hicks_ei_y = None, None, None, None
+            if xh is not None and yh is not None:
+                hicks_es_x = xh - x0
+                hicks_es_y = yh - y0
+                hicks_ei_x = xf - xh
+                hicks_ei_y = yf - yh
+
+            # --- 7. Calculate Welfare Measures (EC, VC, VE) ---
+            consumer_surplus = None
+            ev, cv = None, None
+            expenditure_function_sym = self.calculate_expenditure_function(x_hicks_demand_sym, y_hicks_demand_sym, p1_sym, p2_sym)
+
+            if x_m_demand_sym and changed_price == "p1": # Calculate EC for x1
+                # To calculate EC, we need demand as a function of its OWN price.
+                # Here, we assume p2 and m are fixed at original values.
+                x_demand_eval = x_m_demand_sym.subs({p2_sym: p2_orig, m_sym: m_orig})
+                
+                if x_demand_eval.free_symbols == {p1_sym}: # Check if it's solely a function of p1
+                    # Find price where demand is 0 (or a very small value) for upper limit of integration
+                    # Or integrate from a high price down to current price.
+                    # For well-behaved functions, demand goes to 0 as price goes to infinity.
+                    # Numerical integration for simplicity
+                    
+                    # Define the function to integrate
+                    demand_func_for_integration = lambda p: float(x_demand_eval.subs(p1_sym, p)) if p > 0 else 0
+                    
+                    try:
+                        # Integrate from the current price up to a sufficiently high price where demand is near zero
+                        # Or from 0 to current price and subtract from total area under demand.
+                        # For simplicity, let's integrate from a low price to original price
+                        # For consumer surplus from P_current to P_max(where demand=0), it's integral of x(p)dp
+                        # OR if demand is x=f(p), then it's integral from p_current to infinity.
+                        # Easier: Integral of P(x)dx, from x_current to x_max.
+                        # However, usually easier to integrate x(p) dp from P_current to P_max where x=0 or price is infinite.
+                        
+                        # Let's approximate EC by numerical integration from new_price_val to a very high price
+                        # This assumes we want EC at the *final* price.
+                        # EC = \int_{P_final}^{\infty} x_demand(P_x) dP_x
+                        # This is tricky without the inverse demand function, or price ceiling.
+                        # A simpler method for EC is (Price_reserve - Price_actual) * Quantity / 2 for linear demands.
+                        # Or, area under demand curve above current price.
+
+                        # A common approach for EC for a point change (P0 -> P1) is:
+                        # EC = \int_{P1}^{P0} x(p, m, P2) dp - (x_final * (P0 - P1)) -- this is for change in EC
+                        # To calculate absolute EC, we need the "choke price" where demand is 0.
+
+                        # For simplicity, we'll calculate the absolute EC at the *final* price.
+                        # We need the inverse demand curve P(x) or numerical integration of x(P) from P_final to P_choke.
+                        # If x_demand_eval = f(p1_sym), then integrate f from p1_f to a very large number.
+                        # This is prone to issues if demand doesn't go to zero.
+                        
+                        # Let's try simpler: approximate using trapezoid if demand is "simple".
+                        # Or, if we have a proper inverse demand P(x), integrate P(x)dx.
+                        
+                        # A more robust way to get consumer surplus is from the expenditure function:
+                        # VC = E(p1_f, p2_f, u0) - m0
+                        # VE = m0 - E(p1_orig, p2_orig, uf)
+                        # EC is often calculated as area under Marshallian demand, which requires its inverse.
+                        # Given the complexity, let's prioritize VC/VE from Hicksian.
+
+                        # For now, let's leave EC calculation symbolic for general cases.
+                        # For Cobb-Douglas, if U=x^a*y^b, then x_demand = a*m / (a+b)/p1
+                        # This is a_coeff * m / p1. Integrate (k/p1)dp1 = k*ln(p1).
+                        # This integral goes to infinity, so consumer surplus for Cobb-Douglas (and some others) is infinite.
+                        # This is a known limitation. Excedente del consumidor se usa más con demanda inversa finita.
+                        consumer_surplus = "Ver teoría: puede ser infinito para algunas funciones de utilidad (ej. Cobb-Douglas)."
+                        if is_linear_utility: # For linear demand, EC is triangle
+                            a_m_x = x_m_demand_sym.subs({p2_sym: p2_orig, m_sym: m_orig}).coeff(p1_sym, 0) # constant part
+                            b_m_x = x_m_demand_sym.subs({p2_sym: p2_orig, m_sym: m_orig}).coeff(p1_sym, -1) # coeff of 1/p1
+                            if x_m_demand_sym == (m_sym / p1_sym) and changed_price == "p1": # Case U=x
+                                consumer_surplus = f"Infinito (demanda tipo K/P, ej. U=x)"
+                            elif x_m_demand_sym.is_polynomial(p1_sym): # Linear demand x=A-Bp
+                                # Get the symbolic form of demand for x
+                                x_demand_poly = x_m_demand_sym.subs({p2_sym:p2_orig, m_sym:m_orig})
+                                # Find coefficients A - B*p1
+                                A_val = x_demand_poly.subs(p1_sym, 0)
+                                B_val = -x_demand_poly.diff(p1_sym).subs(p1_sym, 0)
+
+                                if B_val != 0:
+                                    choke_price = A_val / B_val # Price at which demand is zero
+                                    if choke_price > p1_f: # If choke price is above final price
+                                        # Area of triangle: 0.5 * base * height = 0.5 * xf * (choke_price - p1_f)
+                                        consumer_surplus = 0.5 * xf * (float(choke_price) - p1_f)
+                                    else:
+                                        consumer_surplus = 0 # No surplus if price above or equal choke price
+                                else: # B_val is 0, demand is constant, EC is infinite.
+                                    consumer_surplus = "Infinito (demanda constante)"
+                            else:
+                                consumer_surplus = "No es posible calcular para esta función (demanda no lineal/problemas de integral)."
+                        
+                    except Exception as e:
+                        consumer_surplus = f"Error al calcular EC: {e}"
+
+            if expenditure_function_sym is not None:
+                try:
+                    # VC: E(P_final, U_original) - M_original
+                    # Note: expenditure_function_sym expects u_level_sym as input
+                    vc_calc = float(expenditure_function_sym.subs({
+                        p1_sym: p1_f, p2_sym: p2_f, u_level_sym: u0
+                    })) - m_orig
+                    cv = vc_calc # VC is the amount of income needed at new prices to achieve old utility - old income
+
+                    # VE: M_original - E(P_original, U_final)
+                    ve_calc = m_orig - float(expenditure_function_sym.subs({
+                        p1_sym: p1_orig, p2_sym: p2_orig, u_level_sym: uf
+                    }))
+                    ev = ve_calc
+                except Exception as e:
+                    messagebox.showwarning("Advertencia", f"No se pudo calcular VC/VE (función de gasto no evaluable). Error: {e}")
+            else:
+                messagebox.showwarning("Advertencia", "No se pudo obtener la función de gasto simbólica. VC/VE no disponibles.")
+            
+            # --- 8. Plotting ---
+            fig, axs = plt.subplots(2, 2, figsize=(16, 12)) # Grid of 2x2 plots
+
+            # Plot 1: Income and Substitution Effects
+            ax1 = axs[0, 0]
+            # Budget constraint 0
+            x_budget_0 = np.linspace(0, m_orig / p1_orig, 200)
+            y_budget_0 = (m_orig - p1_orig * x_budget_0) / p2_orig
+            y_budget_0[y_budget_0 < 0] = np.nan
+            ax1.plot(x_budget_0, y_budget_0, 'r-', label='BP Original')
+
+            # Budget constraint F
+            x_budget_f = np.linspace(0, m_orig / p1_f, 200)
+            y_budget_f = (m_orig - p1_f * x_budget_f) / p2_f
+            y_budget_f[y_budget_f < 0] = np.nan
+            ax1.plot(x_budget_f, y_budget_f, 'g-', label='BP Final')
+
+            # Plot optimal points E0 and EF
+            ax1.scatter(x0, y0, color='blue', s=150, zorder=5, label=f'E0 ({x0:.2f},{y0:.2f}) U={u0:.2f}')
+            ax1.scatter(xf, yf, color='purple', s=150, zorder=5, label=f'EF ({xf:.2f},{yf:.2f}) U={uf:.2f}')
+            ax1.annotate('E0', (x0 + 0.02 * (m_orig/p1_orig), y0 + 0.02 * (m_orig/p2_orig)))
+            ax1.annotate('EF', (xf + 0.02 * (m_orig/p1_orig), yf + 0.02 * (m_orig/p2_orig)))
+
+            # Plot original Indifference Curve (U0)
+            self.plot_indifference_curve(ax1, U, u0, x, y, p1_orig, p2_orig, m_orig, max(m_orig/p1_orig, m_orig/p1_f)*1.5, max(m_orig/p2_orig, m_orig/p2_f)*1.5, label=f'CI (U={u0:.2f})')
+
+            # Slutsky Plotting
+            if xs is not None and ys is not None:
+                x_budget_s = np.linspace(0, m_slutsky / p1_f, 200)
+                y_budget_s = (m_slutsky - p1_f * x_budget_s) / p2_f
+                y_budget_s[y_budget_s < 0] = np.nan
+                ax1.plot(x_budget_s, y_budget_s, 'y--', label=f'BP Slutsky (m\'={m_slutsky:.2f})')
+                ax1.scatter(xs, ys, color='orange', s=100, zorder=5, label=f'Es ({xs:.2f},{ys:.2f})')
+                ax1.annotate('Es', (xs + 0.02 * (m_orig/p1_orig), ys + 0.02 * (m_orig/p2_orig)))
+
+            # Hicks Plotting
+            if xh is not None and yh is not None and mh is not None:
+                x_budget_h = np.linspace(0, mh / p1_f, 200)
+                y_budget_h = (mh - p1_f * x_budget_h) / p2_f
+                y_budget_h[y_budget_h < 0] = np.nan
+                ax1.plot(x_budget_h, y_budget_h, 'c:', label=f'BP Hicks (m\'\'={mh:.2f})')
+                ax1.scatter(xh, yh, color='darkcyan', s=100, zorder=5, label=f'Eh ({xh:.2f},{yh:.2f})')
+                ax1.annotate('Eh', (xh + 0.02 * (m_orig/p1_orig), yh + 0.02 * (m_orig/p2_orig)))
+
+            max_x_plot = max(m_orig / p1_orig, m_orig / p1_f, x0, xf, xs if xs is not None else 0, xh if xh is not None else 0) * 1.2
+            max_y_plot = max(m_orig / p2_orig, m_orig / p2_f, y0, yf, ys if ys is not None else 0, yh if yh is not None else 0) * 1.2
+            ax1.set_xlim(left=0, right=max(max_x_plot, 10))
+            ax1.set_ylim(bottom=0, top=max(max_y_plot, 10))
+            ax1.set_xlabel('Bien 1 (x)'); ax1.set_ylabel('Bien 2 (y)')
+            ax1.set_title('Descomposición Efecto Ingreso y Sustitución')
+            ax1.legend(); ax1.grid(True)
+
+            # Plot 2: Engel Curve for X
+            ax2 = axs[0, 1]
+            if x_m_demand_sym is not None:
+                try:
+                    m_values = np.linspace(self.m_range_min_var.get(), self.m_range_max_var.get(), 100)
+                    x_demand_engel = x_m_demand_sym.subs({p1_sym: p1_orig, p2_sym: p2_orig})
+                    
+                    x_engel_values = [float(x_demand_engel.subs(m_sym, m_val)) for m_val in m_values]
+                    x_engel_values = np.array(x_engel_values)
+                    x_engel_values[x_engel_values < 0] = np.nan # No negative quantities
+
+                    ax2.plot(x_engel_values, m_values, 'b-', label='Curva de Engel para x')
+                    ax2.set_xlabel('Cantidad de Bien 1 (x)'); ax2.set_ylabel('Ingreso (m)')
+                    ax2.set_title('Curva de Engel para Bien 1')
+                    ax2.legend(); ax2.grid(True)
+                except Exception as e:
+                    ax2.text(0.5, 0.5, f"No se pudo graficar la curva de Engel para X.\nError: {e}", 
+                            horizontalalignment='center', verticalalignment='center', transform=ax2.transAxes, color='red')
+            else:
+                ax2.text(0.5, 0.5, "No se pudo obtener la función de demanda Marshalliana para X (simbólica).", 
+                        horizontalalignment='center', verticalalignment='center', transform=ax2.transAxes, color='red')
+
+            # Plot 3: Marshallian Demand Curve for X
+            ax3 = axs[1, 0]
+            if x_m_demand_sym is not None:
+                try:
+                    p1_values = np.linspace(self.p1_range_min_var.get(), self.p1_range_max_var.get(), 100)
+                    x_demand_marshallian = x_m_demand_sym.subs({p2_sym: p2_orig, m_sym: m_orig})
+                    
+                    x_marshallian_values = [float(x_demand_marshallian.subs(p1_sym, p_val)) for p_val in p1_values]
+                    x_marshallian_values = np.array(x_marshallian_values)
+                    x_marshallian_values[x_marshallian_values < 0] = np.nan # No negative quantities
+
+                    ax3.plot(x_marshallian_values, p1_values, 'b-', label='Curva de Demanda Marshalliana para x')
+                    ax3.set_xlabel('Cantidad de Bien 1 (x)'); ax3.set_ylabel('Precio de Bien 1 (p₁)')
+                    ax3.set_title('Curva de Demanda Marshalliana para Bien 1')
+                    ax3.legend(); ax3.grid(True)
+                except Exception as e:
+                    ax3.text(0.5, 0.5, f"No se pudo graficar la curva de Demanda para X.\nError: {e}", 
+                            horizontalalignment='center', verticalalignment='center', transform=ax3.transAxes, color='red')
+            else:
+                ax3.text(0.5, 0.5, "No se pudo obtener la función de demanda Marshalliana para X (simbólica).", 
+                        horizontalalignment='center', verticalalignment='center', transform=ax3.transAxes, color='red')
+
+
+            # Plot 4: Placeholder for Welfare measures or other plot
+            ax4 = axs[1, 1]
+            ax4.set_visible(False) # Hide for now, or display static text
+            ax4.set_title('Medidas de Bienestar (Ver Resultados Numéricos)')
+
+            # Adjust layout and display plots
+            plt.tight_layout()
+            canvas = FigureCanvasTkAgg(fig, master=self.results_frame)
+            canvas.draw()
+            toolbar = NavigationToolbar2Tk(canvas, self.results_frame)
+            toolbar.update()
+            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            toolbar.pack(side=tk.TOP, fill=tk.X)
+
+            # --- 9. Display Numerical Results ---
+            results_text = f"""
+RESULTADOS DE LA TEORÍA DEL CONSUMIDOR:
+
+Función de Utilidad: U(x,y) = {utility_fn_str_raw}
+Precio cambiado: {changed_price} de {self.p1_var.get() if changed_price == 'p1' else self.p2_var.get()} a {new_price_val}
+Ingreso original: m={m_orig}
+
+Punto Inicial (E0): x={x0:.2f}, y={y0:.2f}, U={u0:.2f}
+Punto Final (EF): x={xf:.2f}, y={yf:.2f}, U={uf:.2f}
+
+--- EFECTO TOTAL ---
+ET_x = x_F - x_0 = {xf:.2f} - {x0:.2f} = {total_effect_x:.2f}
+ET_y = y_F - y_0 = {yf:.2f} - {y0:.2f} = {total_effect_y:.2f}
+
+--- DESCOMPOSICIÓN DE SLUTSKY ---
+Punto Intermedio (Es): x={xs:.2f}, y={ys:.2f} (Ingreso Compensado = {m_slutsky:.2f})
+ES_x (Slutsky) = x_S - x_0 = {xs:.2f} - {x0:.2f} = {slutsky_es_x:.2f}
+EI_x (Slutsky) = x_F - x_S = {xf:.2f} - {xs:.2f} = {slutsky_ei_x:.2f}
+(Comprobación: ES_x + EI_x = {slutsky_es_x + slutsky_ei_x:.2f} vs ET_x = {total_effect_x:.2f})
+
+ES_y (Slutsky) = y_S - y_0 = {ys:.2f} - {y0:.2f} = {slutsky_es_y:.2f}
+EI_y (Slutsky) = y_F - y_S = {yf:.2f} - {ys:.2f} = {slutsky_ei_y:.2f}
+(Comprobación: ES_y + EI_y = {slutsky_es_y + slutsky_ei_y:.2f} vs ET_y = {total_effect_y:.2f})
+
+"""
+            if hicks_es_x is not None:
+                results_text += f"""
+--- DESCOMPOSICIÓN DE HICKS ---
+Punto Intermedio (Eh): x={xh:.2f}, y={yh:.2f} (Ingreso Compensado = {mh:.2f})
+ES_x (Hicks) = x_H - x_0 = {xh:.2f} - {x0:.2f} = {hicks_es_x:.2f}
+EI_x (Hicks) = x_F - x_H = {xf:.2f} - {xh:.2f} = {hicks_ei_x:.2f}
+(Comprobación: ES_x + EI_x = {hicks_es_x + hicks_ei_x:.2f} vs ET_x = {total_effect_x:.2f})
+
+ES_y (Hicks) = y_H - y_0 = {yh:.2f} - {y0:.2f} = {hicks_es_y:.2f}
+EI_y (Hicks) = y_F - y_H = {yf:.2f} - {yh:.2f} = {hicks_ei_y:.2f}
+(Comprobación: ES_y + EI_y = {hicks_es_y + hicks_ei_y:.2f} vs ET_y = {total_effect_y:.2f})
+"""
+            else:
+                results_text += "\nNo se pudo calcular la descomposición de Hicks para esta función (problemas con demanda hicksiana o soluciones de esquina)."
+
+            results_text += f"""
+--- MEDIDAS DE BIENESTAR ---
+Excedente del Consumidor (para bien 1 al precio final P1={p1_f}): {consumer_surplus}
+Variación Compensada (VC): {cv:.2f} (Cantidad a dar/quitar DESPUÉS del cambio de precio para alcanzar U_original={u0:.2f})
+Variación Equivalente (VE): {ev:.2f} (Cantidad a dar/quitar ANTES del cambio de precio para alcanzar U_final={uf:.2f})
+
+"""
+            # Add symbolic demand functions if found
+            if x_m_demand_sym is not None:
+                results_text += f"\n--- FUNCIONES DE DEMANDA MARSHALLIANA (SIMBÓLICA) ---"
+                results_text += f"\nx*(p1, p2, m) = {x_m_demand_sym}"
+                results_text += f"\ny*(p1, p2, m) = {y_m_demand_sym}"
+            else:
+                results_text += "\nNo se pudo obtener la función de demanda Marshalliana simbólica."
+
+            if x_hicks_demand_sym is not None:
+                results_text += f"\n--- FUNCIONES DE DEMANDA HICKSIANA (SIMBÓLICA) ---"
+                results_text += f"\nx^h(p1, p2, U) = {x_hicks_demand_sym}"
+                results_text += f"\ny^h(p1, p2, U) = {y_hicks_demand_sym}"
+            else:
+                results_text += "\nNo se pudo obtener la función de demanda Hicksiana simbólica."
+
+            if expenditure_function_sym is not None:
+                results_text += f"\n--- FUNCIÓN DE GASTO (SIMBÓLICA) ---"
+                results_text += f"\nE(p1, p2, U) = {expenditure_function_sym}"
+            else:
+                results_text += "\nNo se pudo obtener la función de gasto simbólica."
+
+            results_label = tk.Text(self.results_frame, wrap=tk.WORD, height=30)
+            results_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(10,0)) 
+            results_label.insert(tk.END, results_text)
+            results_label.config(state=tk.DISABLED)
+            
+        except ValueError as e:
+            messagebox.showerror("Error de Entrada", f"Entrada inválida: {str(e)}")
+        except Exception as e:
+            messagebox.showerror("Error Inesperado", f"Ocurrió un error inesperado: {str(e)}\n"
+                                                      "Por favor, verifique el formato de su función de utilidad y los parámetros.")
+            print(f"Error detallado: {e}") 
+
+    def plot_indifference_curve(self, ax, U_sym, u_level, x_sym, y_sym, p1_val, p2_val, m_val, x_limit, y_limit, label='CI'):
+        """
+        Dibuja una curva de indiferencia para un nivel de utilidad dado.
+        """
+        is_perfect_complements, is_linear_utility = self.get_function_characteristics(U_sym, x_sym, y_sym)
+        
+        if is_perfect_complements: # U = Min(ax, by)
+            a_comp, b_comp = 1, 1
+            if 'Min(' in str(U_sym):
+                content_in_min = str(U_sym).split('Min(')[1].split(')')[0]
+                parts = content_in_min.split(',')
+                if len(parts) == 2:
+                    x_expr_str = parts[0].strip()
+                    y_expr_str = parts[1].strip()
+                    a_sym = sympify(x_expr_str.replace('x','1*x').replace('x',''), locals={x_sym:x_sym}) if 'x' in x_expr_str else S.One
+                    b_sym = sympify(y_expr_str.replace('y','1*y').replace('y',''), locals={y_sym:y_sym}) if 'y' in y_expr_str else S.One
+                    
+                    if a_sym.is_Number: a_comp = float(a_sym)
+                    if b_sym.is_Number: b_comp = float(b_sym)
+            
+            x_corner = u_level / a_comp if a_comp != 0 else x_limit # If a_comp is 0, then U only depends on y
+            y_corner = u_level / b_comp if b_comp != 0 else y_limit # If b_comp is 0, then U only depends on x
+            
+            ax.plot([x_corner, x_corner], [0, y_corner], 'b-') # Vertical part
+            ax.plot([0, x_corner], [y_corner, y_corner], 'b-', label=label) # Horizontal part
+
+        elif is_linear_utility: # Perfect substitutes U = ax + by
+            a_sub = U_sym.diff(x_sym).subs({x_sym:1, y_sym:1}) 
+            b_sub = U_sym.diff(y_sym).subs({x_sym:1, y_sym:1}) 
+
+            x_values_indiff = np.linspace(0, x_limit, 300)
+            if b_sub != 0:
+                y_values_indiff = (u_level - float(a_sub) * x_values_indiff) / float(b_sub)
+                y_values_indiff[(y_values_indiff < -1e-9) | (y_values_indiff > y_limit*2) | np.iscomplex(y_values_indiff)] = np.nan
+                ax.plot(x_values_indiff, y_values_indiff, 'b-', label=label)
+            else: # U only depends on x, e.g., U=x
+                if a_sub != 0:
+                    ax.axvline(x=u_level/a_sub, color='b', linestyle='-', label=label)
+                else: 
+                    pass 
+        else: # Cobb-Douglas, Quasilinear, or general differentiable functions
+            x_plot_min = 0.001 
+            x_values_indiff = np.linspace(x_plot_min, x_limit, 500)
+            
+            y_values_indiff_plot = []
+            
+            for x_val in x_values_indiff:
+                try:
+                    y_guess_for_nsolve = y_limit / 2
+                    sol_y = nsolve(Eq(U_sym.subs(x_sym, x_val), u_level), y_sym, y_guess_for_nsolve, verify=False) # Added verify=False
+                    y_values_indiff_plot.append(float(sol_y))
+                except (TypeError, ValueError, Exception): # Catch errors from nsolve or if solution is non-real
+                    y_values_indiff_plot.append(np.nan)
+            
+            y_values_indiff_plot = np.array(y_values_indiff_plot)
+            
+            y_values_indiff_plot[(y_values_indiff_plot < -1e-9) | (y_values_indiff_plot > y_limit*2) | np.iscomplex(y_values_indiff_plot)] = np.nan
+            
+            if not all(np.isnan(y_values_indiff_plot)):
+                ax.plot(x_values_indiff, y_values_indiff_plot, 'b-', label=label)
+
+# Run the application
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ConsumerTheoryApp(root)
+    root.mainloop()
